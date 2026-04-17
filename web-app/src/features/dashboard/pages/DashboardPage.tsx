@@ -9,19 +9,16 @@ import {
 } from 'lucide-react'
 
 // ─────────────────────────────────────────────────────────
-// DashboardPage — Main landing page for society admins (President,
-// Secretary, Treasurer, Supervisor). Shows real-time KPIs,
-// SLA breach alerts, and pending approvals queue.
+// DashboardPage — Tesla-inspired President dashboard.
 // ─────────────────────────────────────────────────────────
 
-// Mock data — replace with real API calls via dashboard.api.ts
 const MOCK_STATS = [
-  { title: 'Total Residents', value: '486', icon: <Users size={20} />, iconColor: '#3b82f6', trend: 3, description: '12 pending approvals' },
-  { title: 'Maintenance Dues', value: '₹2.4L', icon: <Wallet size={20} />, iconColor: '#f59e0b', trend: -8, description: '34 defaulters this month' },
-  { title: 'Open Complaints', value: '18', icon: <AlertTriangle size={20} />, iconColor: '#ef4444', trend: 12, description: '3 SLA breaches today' },
-  { title: 'Active Gate Passes', value: '7', icon: <ShieldAlert size={20} />, iconColor: '#10b981', trend: 0, description: 'Last 24 hours' },
-  { title: 'Edge Server Status', value: 'Online', icon: <Cpu size={20} />, iconColor: '#8b5cf6', description: 'Last ping 42s ago' },
-  { title: 'Today\'s Collections', value: '₹84,500', icon: <TrendingUp size={20} />, iconColor: '#06b6d4', trend: 22, description: '12 payments received' },
+  { title: 'Total residents', value: '486', icon: <Users size={20} />, iconColor: '#3E6AE1', trend: 3, description: '12 pending approvals' },
+  { title: 'Maintenance dues', value: '₹2.4L', icon: <Wallet size={20} />, iconColor: '#f59e0b', trend: -8, description: '34 defaulters this month' },
+  { title: 'Open complaints', value: '18', icon: <AlertTriangle size={20} />, iconColor: '#ef4444', trend: 12, description: '3 SLA breaches today' },
+  { title: 'Active gate passes', value: '7', icon: <ShieldAlert size={20} />, iconColor: '#10b981', trend: 0, description: 'Last 24 hours' },
+  { title: 'Edge server status', value: 'Online', icon: <Cpu size={20} />, iconColor: '#8b5cf6', description: 'Last ping 42s ago' },
+  { title: "Today's collections", value: '₹84,500', icon: <TrendingUp size={20} />, iconColor: '#06b6d4', trend: 22, description: '12 payments received' },
 ]
 
 const MOCK_COMPLAINTS = [
@@ -39,63 +36,87 @@ const TICKET_STATUS_MAP: Record<string, 'danger' | 'warning' | 'info' | 'neutral
 }
 
 const MOCK_PENDING = [
-  { type: 'Move-In Approval', detail: 'Priya Sharma — Flat B-404', time: '2h ago' },
-  { type: 'Expense Sign-off', detail: '₹1,20,000 — Lift AMC Repair', time: '4h ago' },
-  { type: 'Vendor Contract', detail: 'SwachBharat Cleaning Pvt Ltd', time: '1d ago' },
+  { type: 'Move-in approval', detail: 'Priya Sharma — Flat B-404', time: '2h ago' },
+  { type: 'Expense sign-off', detail: '₹1,20,000 — Lift AMC Repair', time: '4h ago' },
+  { type: 'Vendor contract', detail: 'SwachBharat Cleaning Pvt Ltd', time: '1d ago' },
 ]
+
+import { useEffect, useState } from 'react'
+import { apiClient } from '@/lib/api'
 
 export default function DashboardPage() {
   const { tenantId } = useParams<{ tenantId: string }>()
+  
+  // Real API state for helpdesk
+  const [complaints, setComplaints] = useState<any[]>([])
+  const [loadingComplaints, setLoadingComplaints] = useState(true)
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const res = await apiClient.get('/complaints');
+        // Take the top 5 most recent complaints
+        setComplaints(res.data.slice(0, 5));
+      } catch (err) {
+        console.error('Failed to fetch complaints:', err);
+      } finally {
+        setLoadingComplaints(false);
+      }
+    };
+    fetchDashboardData();
+  }, []);
 
   return (
     <DashboardLayout>
-      {/* Page header */}
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-900">Society Dashboard</h1>
-        <p className="text-sm text-slate-500 mt-0.5">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-[40px] font-medium leading-[1.2]" style={{ color: 'var(--color-heading)' }}>
+          Society dashboard
+        </h1>
+        <p className="text-sm mt-2" style={{ color: 'var(--color-tertiary)' }}>
           {tenantId ?? 'Alpha Society'} · Live view as of {new Date().toLocaleTimeString('en-IN')}
         </p>
       </div>
 
-      {/* KPI grid — responsive 1→2→3 cols */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
+      {/* KPI grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mb-8" style={{ background: 'var(--color-light-ash)', borderRadius: '12px', padding: '4px' }}>
         {MOCK_STATS.map((s) => (
           <StatCard key={s.title} {...s} />
         ))}
       </div>
 
-      {/* Lower row: SLA breaches + Pending approvals */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* SLA Complaints */}
-        <Card title="Active Helpdesk Tickets" subtitle="Sorted by SLA urgency">
-          <div className="space-y-2.5">
-            {MOCK_COMPLAINTS.map((t) => (
+      {/* Lower row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* SLA Complaints (Live Data) */}
+        <Card title="Active helpdesk tickets" subtitle="Live feed from backend">
+          <div className="space-y-2">
+            {loadingComplaints ? (
+              <p className="text-sm text-gray-500 p-2">Loading live tickets...</p>
+            ) : complaints.length === 0 ? (
+              <p className="text-sm text-gray-500 p-2">No active tickets found.</p>
+            ) : complaints.map((t) => (
               <div
                 key={t.id}
-                className="flex items-center justify-between py-3 px-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer group"
-                style={{ border: '1px solid var(--color-surface-100)' }}
+                className="flex flex-col sm:flex-row sm:items-center justify-between py-3 px-3 rounded-[4px] transition-colors duration-[330ms] cursor-pointer gap-3 hover:bg-[#F4F4F4]"
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className="flex items-center justify-center w-8 h-8 rounded-lg text-xs font-bold text-white"
+                    className="flex items-center justify-center w-8 h-8 rounded-[4px] text-xs font-medium text-white"
                     style={{
-                      background: t.priority === 'high' ? '#ef4444'
-                        : t.priority === 'medium' ? '#f59e0b' : '#94a3b8',
+                      background: t.priority === 'HIGH' ? '#ef4444'
+                                : t.priority === 'MEDIUM' ? '#f59e0b' : '#8E8E8E',
                     }}
                   >
-                    {t.id.split('-')[1]}
+                    TK
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-slate-800">{t.category}</p>
-                    <p className="text-xs text-slate-500">{t.unit}</p>
+                    <p className="text-sm font-medium" style={{ color: 'var(--color-heading)' }}>{t.title || t.category}</p>
+                    <p className="text-xs" style={{ color: 'var(--color-placeholder)' }}>{t.raisedBy?.name || 'Resident'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 text-right">
                   <div>
-                    <Badge variant={TICKET_STATUS_MAP[t.status] ?? 'neutral'}>{t.status}</Badge>
-                    <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1 justify-end">
-                      <Clock size={10} />{t.sla}
-                    </p>
+                    <Badge variant={TICKET_STATUS_MAP[t.status] ?? 'neutral'}>{(t.status || 'PENDING').replace('_', ' ')}</Badge>
                   </div>
                 </div>
               </div>
@@ -104,25 +125,24 @@ export default function DashboardPage() {
         </Card>
 
         {/* Pending Approvals */}
-        <Card title="Pending Approvals" subtitle="Awaiting your sign-off">
-          <div className="space-y-3">
+        <Card title="Pending approvals" subtitle="Awaiting your sign-off">
+          <div className="space-y-2">
             {MOCK_PENDING.map((item, i) => (
               <div
                 key={i}
-                className="flex items-start gap-3 py-3 px-3 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
-                style={{ border: '1px solid var(--color-surface-100)' }}
+                className="flex items-start gap-3 py-3 px-3 rounded-[4px] transition-colors duration-[330ms] cursor-pointer hover:bg-[#F4F4F4]"
               >
                 <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
-                  style={{ background: '#dbeafe' }}
+                  className="w-8 h-8 rounded-[4px] flex items-center justify-center shrink-0 mt-0.5"
+                  style={{ background: '#3E6AE114' }}
                 >
-                  <CheckCircle size={14} color="#2563eb" />
+                  <CheckCircle size={14} style={{ color: 'var(--color-electric-blue)' }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-800">{item.type}</p>
-                  <p className="text-xs text-slate-500 truncate">{item.detail}</p>
+                  <p className="text-sm font-medium" style={{ color: 'var(--color-heading)' }}>{item.type}</p>
+                  <p className="text-xs truncate" style={{ color: 'var(--color-tertiary)' }}>{item.detail}</p>
                 </div>
-                <span className="text-[10px] text-slate-400 shrink-0">{item.time}</span>
+                <span className="text-[10px] shrink-0" style={{ color: 'var(--color-placeholder)' }}>{item.time}</span>
               </div>
             ))}
           </div>

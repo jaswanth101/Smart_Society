@@ -3,8 +3,7 @@ import { useState } from 'react'
 import { useAuthStore } from '@/store/auth.store'
 
 // ─────────────────────────────────────────────────────────
-// Topbar — sits above main content.
-// Contains search, notifications badge, and theme toggle.
+// Topbar — Tesla-inspired: white bg, no shadow, frosted glass
 // ─────────────────────────────────────────────────────────
 
 export function Topbar() {
@@ -21,16 +20,17 @@ export function Topbar() {
     <header
       className="shrink-0 flex items-center gap-4 px-4 md:px-6 lg:px-8 py-3.5"
       style={{
-        background: 'var(--color-surface-0)',
-        borderBottom: '1px solid var(--color-surface-200)',
+        background: 'var(--color-white)',
+        borderBottom: '1px solid var(--color-cloud)',
       }}
       role="banner"
     >
-      {/* Search bar */}
+      {/* Search */}
       <div className="relative flex-1 max-w-sm">
         <Search
           size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+          className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+          style={{ color: 'var(--color-placeholder)' }}
           aria-hidden
         />
         <input
@@ -39,7 +39,12 @@ export function Topbar() {
           placeholder="Search members, tickets, units…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
+          className="w-full pl-9 pr-4 py-2 text-sm rounded-[4px] border transition-all duration-[330ms]"
+          style={{
+            borderColor: 'var(--color-cloud)',
+            background: 'var(--color-white)',
+            color: 'var(--color-heading)',
+          }}
         />
       </div>
 
@@ -47,7 +52,8 @@ export function Topbar() {
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+          className="p-2 rounded-[4px] transition-colors duration-[330ms]"
+          style={{ color: 'var(--color-tertiary)' }}
           aria-label="Toggle theme"
         >
           {dark ? <Sun size={18} /> : <Moon size={18} />}
@@ -56,21 +62,28 @@ export function Topbar() {
         {/* Notifications */}
         <button
           id="notification-bell"
-          className="relative p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+          className="relative p-2 rounded-[4px] transition-colors duration-[330ms]"
+          style={{ color: 'var(--color-tertiary)' }}
           aria-label="Notifications"
         >
           <Bell size={18} />
-          {/* Unread badge — hardcoded for structure; will be dynamic */}
           <span
-            className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500"
+            className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
+            style={{ background: 'var(--color-electric-blue)' }}
             aria-label="Unread notifications"
           />
         </button>
 
-        {/* Tenant context chip */}
+        {/* Tenant chip */}
         {user?.tenantId && (
-          <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-100">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+          <div
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-[4px] text-[11px] font-medium"
+            style={{
+              background: 'var(--color-light-ash)',
+              color: 'var(--color-tertiary)',
+            }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--color-electric-blue)' }} />
             {user.tenantId}
           </div>
         )}

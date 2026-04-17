@@ -1,34 +1,54 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common'
-import { JwtService } from '@nestjs/jwt'
-import { LoginDto }   from './dto/login.dto'
-
-// ─────────────────────────────────────────────────────────
-// AuthService — Business logic for authentication.
-// Handles both admin (email+password) and resident (phone+OTP) flows.
-// TODO: inject UserRepository and connect to real DB once Phase 1 begins.
-// ─────────────────────────────────────────────────────────
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcryptjs';
+import { PrismaService } from '../../common/prisma/prisma.service';
+import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
 
-  async login(dto: LoginDto) {
-    // TODO: query user from PostgreSQL, validate password with bcrypt
-    throw new UnauthorizedException('Authentication not yet implemented')
+  async login(loginDto: LoginDto) {
+    const { email, password } = loginDto;
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is inactive');
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const payload = { sub: user.id, email: user.email, role: user.role, tenantId: user.tenantId };
+    
+    return {
+      accessToken: this.jwtService.sign(payload),
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        tenantId: user.tenantId,
+        unitId: user.unitId
+      }
+    };
   }
 
-  async sendOtp(phone: string) {
-    // TODO: generate 6-digit OTP, store in Redis with TTL 300s, send via MSG91
-    return { message: `OTP sent to ${phone}` }
-  }
-
-  async verifyOtp(phone: string, otp: string) {
-    // TODO: validate OTP from Redis, fetch user, sign JWT
-    throw new UnauthorizedException('OTP verification not yet implemented')
-  }
-
-  async refreshToken(refreshToken: string) {
-    // TODO: verify refresh token, issue new access token
-    throw new UnauthorizedException('Token refresh not yet implemented')
+  // Placeholder for when we add registration logic
+  async register(data: any) {
+    // To be implemented in Users module or Tenant onboarding
   }
 }

@@ -1,0 +1,538 @@
+// This is the SmartSociety 360 database schema.
+// Multi-tenant: each society is a tenant. Data isolation via tenantId FK.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ── ENUMS ──────────────────────────────────────────────────
+
+enum UserRole {
+  SUPER_ADMIN
+  PRESIDENT
+  SECRETARY
+  TREASURER
+  SUPERVISOR
+  SECURITY_GUARD
+  STAFF
+  FLAT_OWNER
+  TENANT
+}
+
+enum UnitType {
+  BHK1
+  BHK2
+  BHK3
+  PENTHOUSE
+  SHOP
+  OFFICE
+}
+
+enum UnitOccupancy {
+  OCCUPIED
+  VACANT
+  RENTED
+}
+
+enum TicketStatus {
+  PENDING
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  ESCALATED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  WAIVED
+}
+
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum VendorStatus {
+  ACTIVE
+  EXPIRED
+  BLACKLISTED
+}
+
+enum VehicleType {
+  CAR
+  BIKE
+  EV
+}
+
+enum ParkingStatus {
+  ASSIGNED
+  AVAILABLE
+  GUEST
+}
+
+enum RfidStatus {
+  ACTIVE
+  LOST
+  BLOCKED
+  EXPIRED
+}
+
+enum AmenityStatus {
+  ACTIVE
+  MAINTENANCE
+  BLOCKED
+}
+
+enum NoticeCategory {
+  GENERAL
+  AGM
+  MAINTENANCE
+  AMENITY
+  EMERGENCY
+  FINANCIAL
+}
+
+enum ElectionStatus {
+  UPCOMING
+  VOTING_OPEN
+  COMPLETED
+  CANCELLED
+}
+
+enum StaffShiftType {
+  DAY
+  NIGHT
+  MORNING
+  CUSTOM
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  PHOTO_UPLOADED
+  COMPLETED
+}
+
+enum VisitStatus {
+  UPCOMING
+  CHECKED_IN
+  COMPLETED
+  EXPIRED
+  REJECTED
+}
+
+enum GateAction {
+  OPEN
+  CLOSE
+  EMERGENCY_OVERRIDE
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+// ── CORE TABLES ────────────────────────────────────────────
+
+model Tenant {
+  id              String   @id @default(uuid())
+  name            String
+  slug            String   @unique
+  address         String
+  city            String
+  state           String   @default("")
+  totalUnits      Int      @default(0)
+  subscriptionTier String  @default("STANDARD")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  users           User[]
+  buildings       Building[]
+  units           Unit[]
+  invoices        Invoice[]
+  expenses        Expense[]
+  feeRules        FeeRule[]
+  complaints      Complaint[]
+  notices         Notice[]
+  broadcasts      Broadcast[]
+  rfidCards       RfidCard[]
+  amenities       Amenity[]
+  parkingSlots    ParkingSlot[]
+  vendors         Vendor[]
+  staffMembers    StaffMember[]
+  elections       Election[]
+  visitors        Visitor[]
+  gateLogs        GateLog[]
+  tasks           Task[]
+
+  @@map("tenants")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  phone       String   @unique
+  name        String
+  password    String
+  role        UserRole
+  isActive    Boolean  @default(true)
+  avatarUrl   String?
+  tenantId    String?
+  unitId      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant?   @relation(fields: [tenantId], references: [id])
+  unit        Unit?     @relation(fields: [unitId], references: [id])
+  complaints  Complaint[] @relation("complainant")
+  assignedComplaints Complaint[] @relation("assignee")
+  votes       Vote[]
+
+  @@map("users")
+}
+
+// ── PROPERTY ───────────────────────────────────────────────
+
+model Building {
+  id        String   @id @default(uuid())
+  name      String   // e.g. "Tower A"
+  floors    Int      @default(1)
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  units     Unit[]
+
+  @@map("buildings")
+}
+
+model Unit {
+  id          String        @id @default(uuid())
+  flatNumber  String
+  floor       Int
+  type        UnitType
+  sqft        Int           @default(0)
+  occupancy   UnitOccupancy @default(VACANT)
+  tenantId    String
+  buildingId  String
+  tenant      Tenant        @relation(fields: [tenantId], references: [id])
+  building    Building      @relation(fields: [buildingId], references: [id])
+  residents   User[]
+  invoices    Invoice[]
+  parkingSlots ParkingSlot[]
+
+  @@unique([tenantId, flatNumber])
+  @@map("units")
+}
+
+// ── FINANCE ────────────────────────────────────────────────
+
+model FeeRule {
+  id          String   @id @default(uuid())
+  unitType    UnitType
+  baseAmount  Float
+  lateFeePercent Float @default(5)
+  dueDay      Int      @default(5)
+  frequency   String   @default("MONTHLY")
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, unitType])
+  @@map("fee_rules")
+}
+
+model Invoice {
+  id          String        @id @default(uuid())
+  amount      Float
+  dueDate     DateTime
+  status      InvoiceStatus @default(PENDING)
+  month       String
+  year        Int
+  paidAt      DateTime?
+  receiptUrl  String?
+  unitId      String
+  tenantId    String
+  unit        Unit          @relation(fields: [unitId], references: [id])
+  tenant      Tenant        @relation(fields: [tenantId], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@map("invoices")
+}
+
+model Expense {
+  id          String        @id @default(uuid())
+  title       String
+  category    String
+  amount      Float
+  vendorName  String?
+  status      ExpenseStatus @default(PENDING)
+  receiptUrl  String?
+  tenantId    String
+  tenant      Tenant        @relation(fields: [tenantId], references: [id])
+  createdAt   DateTime      @default(now())
+
+  @@map("expenses")
+}
+
+// ── ACCESS CONTROL ─────────────────────────────────────────
+
+model RfidCard {
+  id          String     @id @default(uuid())
+  uid         String     @unique
+  holderName  String
+  holderType  String     // "OWNER", "TENANT", "STAFF", "DOMESTIC"
+  status      RfidStatus @default(ACTIVE)
+  tenantId    String
+  tenant      Tenant     @relation(fields: [tenantId], references: [id])
+  issuedAt    DateTime   @default(now())
+
+  @@map("rfid_cards")
+}
+
+model Amenity {
+  id            String        @id @default(uuid())
+  name          String
+  maxCapacity   Int
+  quotaPerWeek  Int            @default(7)
+  timings       String
+  rfidRequired  Boolean        @default(true)
+  status        AmenityStatus  @default(ACTIVE)
+  tenantId      String
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+
+  @@map("amenities")
+}
+
+model ParkingSlot {
+  id          String        @id @default(uuid())
+  slotNumber  String
+  zone        String
+  vehicleType VehicleType   @default(CAR)
+  status      ParkingStatus @default(AVAILABLE)
+  vehicle     String?
+  unitId      String?
+  tenantId    String
+  unit        Unit?         @relation(fields: [unitId], references: [id])
+  tenant      Tenant        @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, slotNumber])
+  @@map("parking_slots")
+}
+
+model GateLog {
+  id        String     @id @default(uuid())
+  gate      String
+  action    GateAction
+  actor     String
+  method    String     // "RFID", "MANUAL", "REMOTE", "EMERGENCY"
+  tenantId  String
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  timestamp DateTime   @default(now())
+
+  @@map("gate_logs")
+}
+
+// ── STAFF & VENDORS ────────────────────────────────────────
+
+model StaffMember {
+  id          String   @id @default(uuid())
+  name        String
+  role        String
+  department  String
+  phone       String
+  shift       StaffShiftType @default(DAY)
+  shiftTime   String   @default("9AM-6PM")
+  rating      Float    @default(0)
+  isActive    Boolean  @default(true)
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  joinedAt    DateTime @default(now())
+  tasks       Task[]
+  attendance  StaffAttendance[]
+
+  @@map("staff_members")
+}
+
+model StaffAttendance {
+  id          String           @id @default(uuid())
+  staffId     String
+  day         DateTime
+  status      AttendanceStatus @default(PRESENT)
+  zone        String?
+  staff       StaffMember      @relation(fields: [staffId], references: [id])
+
+  @@unique([staffId, day])
+  @@map("staff_attendance")
+}
+
+model Task {
+  id          String     @id @default(uuid())
+  title       String
+  zone        String?
+  priority    TicketPriority @default(MEDIUM)
+  status      TaskStatus @default(PENDING)
+  photoUrl    String?
+  dueBy       DateTime?
+  staffId     String?
+  tenantId    String
+  staff       StaffMember? @relation(fields: [staffId], references: [id])
+  tenant      Tenant     @relation(fields: [tenantId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("tasks")
+}
+
+model Vendor {
+  id            String       @id @default(uuid())
+  companyName   String
+  category      String
+  contactPerson String
+  phone         String
+  monthlyValue  Float        @default(0)
+  contractEnd   DateTime?
+  status        VendorStatus @default(ACTIVE)
+  tenantId      String
+  tenant        Tenant       @relation(fields: [tenantId], references: [id])
+
+  @@map("vendors")
+}
+
+// ── COMMUNICATIONS ─────────────────────────────────────────
+
+model Notice {
+  id              String         @id @default(uuid())
+  title           String
+  body            String
+  category        NoticeCategory @default(GENERAL)
+  isPinned        Boolean        @default(false)
+  authorName      String
+  readCount       Int            @default(0)
+  totalRecipients Int            @default(0)
+  tenantId        String
+  tenant          Tenant         @relation(fields: [tenantId], references: [id])
+  createdAt       DateTime       @default(now())
+
+  @@map("notices")
+}
+
+model Broadcast {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  channel   String   // "PUSH", "SMS", "WHATSAPP", "ALL"
+  sentBy    String
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  sentAt    DateTime @default(now())
+
+  @@map("broadcasts")
+}
+
+// ── HELPDESK / COMPLAINTS ──────────────────────────────────
+
+model Complaint {
+  id            String         @id @default(uuid())
+  ticketId      String         @unique @default(uuid())
+  title         String
+  description   String
+  category      String
+  status        TicketStatus   @default(PENDING)
+  priority      TicketPriority @default(MEDIUM)
+  photos        String[]
+  slaDeadline   DateTime?
+  raisedById    String
+  assignedToId  String?
+  tenantId      String
+  raisedBy      User           @relation("complainant", fields: [raisedById], references: [id])
+  assignedTo    User?          @relation("assignee", fields: [assignedToId], references: [id])
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("complaints")
+}
+
+// ── VISITORS ───────────────────────────────────────────────
+
+model Visitor {
+  id          String      @id @default(uuid())
+  name        String
+  purpose     String
+  phone       String?
+  vehicleNo   String?
+  qrCode      String?     @unique
+  status      VisitStatus @default(UPCOMING)
+  hostUnitId  String?
+  tenantId    String
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  scheduledAt DateTime
+  checkinAt   DateTime?
+  checkoutAt  DateTime?
+  createdAt   DateTime    @default(now())
+
+  @@map("visitors")
+}
+
+// ── ELECTIONS ──────────────────────────────────────────────
+
+model Election {
+  id          String         @id @default(uuid())
+  title       String
+  description String?
+  status      ElectionStatus @default(UPCOMING)
+  quorum      Int            @default(50)
+  startDate   DateTime?
+  endDate     DateTime?
+  tenantId    String
+  tenant      Tenant         @relation(fields: [tenantId], references: [id])
+  candidates  Candidate[]
+  votes       Vote[]
+  createdAt   DateTime       @default(now())
+
+  @@map("elections")
+}
+
+model Candidate {
+  id          String   @id @default(uuid())
+  name        String
+  manifesto   String?
+  photoUrl    String?
+  voteCount   Int      @default(0)
+  electionId  String
+  election    Election @relation(fields: [electionId], references: [id])
+
+  @@map("candidates")
+}
+
+model Vote {
+  id          String   @id @default(uuid())
+  userId      String
+  electionId  String
+  candidateId String
+  user        User     @relation(fields: [userId], references: [id])
+  election    Election @relation(fields: [electionId], references: [id])
+  castAt      DateTime @default(now())
+
+  @@unique([userId, electionId])
+  @@map("votes")
+}

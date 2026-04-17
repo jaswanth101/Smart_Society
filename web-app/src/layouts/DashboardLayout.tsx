@@ -3,9 +3,8 @@ import { Sidebar } from './components/Sidebar'
 import { Topbar } from './components/Topbar'
 
 // ─────────────────────────────────────────────────────────
-// DashboardLayout — Main shell for all admin pages.
-// Renders a fixed sidebar + scrollable content area.
-// Fully responsive: sidebar collapses to drawer on mobile.
+// DashboardLayout — Tesla-inspired admin shell.
+// Carbon Dark sidebar + white content area, no shadows.
 // ─────────────────────────────────────────────────────────
 
 interface DashboardLayoutProps {
@@ -14,11 +13,8 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <div className="flex h-screen bg-[var(--color-surface-50)] overflow-hidden">
-      {/* Sidebar — fixed left panel */}
+    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--color-light-ash)' }}>
       <Sidebar />
-
-      {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Topbar />
         <main

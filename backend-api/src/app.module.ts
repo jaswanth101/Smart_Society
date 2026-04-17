@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
-import { TypeOrmModule } from '@nestjs/typeorm'
-import { MongooseModule } from '@nestjs/mongoose'
-import { BullModule } from '@nestjs/bullmq'
 import { EventEmitterModule } from '@nestjs/event-emitter'
 import { ScheduleModule } from '@nestjs/schedule'
 import { ThrottlerModule } from '@nestjs/throttler'
+
+// Prisma (replaces TypeORM + Mongoose)
+import { PrismaModule } from './common/prisma/prisma.module'
 
 // Feature Modules
 import { AuthModule }           from './modules/auth/auth.module'
@@ -27,19 +27,14 @@ import { UtilitiesModule }      from './modules/utilities/utilities.module'
 import { ParcelsModule }        from './modules/parcels/parcels.module'
 import { MarketplaceModule }    from './modules/marketplace/marketplace.module'
 import { ElectionsModule }      from './modules/elections/elections.module'
-import { WebsocketsModule }     from './websockets/websockets.module'
-import { JobsModule }           from './jobs/jobs.module'
 
-// Configuration files
+// Configuration
 import appConfig      from './config/app.config'
-import databaseConfig from './config/database.config'
-import redisConfig    from './config/redis.config'
-import mongodbConfig  from './config/mongodb.config'
 
 // ─────────────────────────────────────────────────────────
-// AppModule — Root module. Imports all feature modules.
-// Strict module boundaries enforced: modules communicate
-// via events/interfaces, never direct imports across domains.
+// AppModule — Root module.
+// Uses Prisma for PostgreSQL. TypeORM & Mongoose removed.
+// BullMQ, WebSockets, Jobs deferred until Redis is configured.
 // ─────────────────────────────────────────────────────────
 
 @Module({
@@ -47,31 +42,23 @@ import mongodbConfig  from './config/mongodb.config'
     // Configuration (validates .env at startup)
     ConfigModule.forRoot({
       isGlobal:   true,
-      load:       [appConfig, databaseConfig, redisConfig, mongodbConfig],
+      load:       [appConfig],
       envFilePath: '.env',
     }),
 
-    // Rate limiting — guards all routes against abuse
+    // Rate limiting
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
 
-    // Event bus — enables decoupled module communication
+    // Event bus
     EventEmitterModule.forRoot(),
 
-    // Background job scheduling (CRON)
+    // Background scheduling
     ScheduleModule.forRoot(),
 
-    // BullMQ — distributed job queues via Redis
-    BullModule.forRootAsync({
-      useFactory: () => ({
-        connection: {
-          host:     process.env.REDIS_HOST ?? 'localhost',
-          port:     parseInt(process.env.REDIS_PORT ?? '6379'),
-          password: process.env.REDIS_PASSWORD,
-        },
-      }),
-    }),
+    // Database (Prisma — global)
+    PrismaModule,
 
-    // Feature modules (decoupled, no cross-imports)
+    // Feature modules
     AuthModule,
     TenantsModule,
     UsersModule,
@@ -91,8 +78,6 @@ import mongodbConfig  from './config/mongodb.config'
     ParcelsModule,
     MarketplaceModule,
     ElectionsModule,
-    WebsocketsModule,
-    JobsModule,
   ],
 })
 export class AppModule {}

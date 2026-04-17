@@ -1,12 +1,12 @@
 import { type ReactNode } from 'react'
 
 // ─────────────────────────────────────────────────────────
-// Card — Surface container for dashboard widgets and sections.
-// Supports: header with title/action, body, footer slots.
+// Card — Tesla-inspired surface container.
+// No shadow, no border. 12px radius. Spacing-based separation.
 // ─────────────────────────────────────────────────────────
 
 interface CardProps {
-  title?:    string
+  title?:    ReactNode
   subtitle?: string
   action?:   ReactNode
   footer?:   ReactNode
@@ -17,23 +17,25 @@ interface CardProps {
 
 export function Card({ title, subtitle, action, footer, children, className = '', noPadding = false }: CardProps) {
   return (
-    <div className={`card ${className}`}>
+    <div className={`rounded-[12px] bg-white ${noPadding ? '' : 'p-6'} ${className}`}>
       {(title || action) && (
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             {title && (
-              <h3 className="text-base font-semibold text-slate-800 leading-tight">{title}</h3>
+              typeof title === 'string'
+                ? <h3 className="text-[17px] font-medium leading-tight" style={{ color: 'var(--color-heading)' }}>{title}</h3>
+                : title
             )}
             {subtitle && (
-              <p className="text-sm text-slate-500 mt-0.5">{subtitle}</p>
+              <p className="text-sm mt-0.5" style={{ color: 'var(--color-tertiary)' }}>{subtitle}</p>
             )}
           </div>
           {action && <div className="shrink-0">{action}</div>}
         </div>
       )}
-      <div className={noPadding ? '-mx-6 -mb-6' : ''}>{children}</div>
+      <div className={noPadding ? '' : ''}>{children}</div>
       {footer && (
-        <div className="mt-4 pt-4 border-t border-slate-100">{footer}</div>
+        <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--color-cloud)' }}>{footer}</div>
       )}
     </div>
   )

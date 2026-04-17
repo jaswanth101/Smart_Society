@@ -1,9 +1,8 @@
 import { type ButtonHTMLAttributes, type ReactNode } from 'react'
 
 // ─────────────────────────────────────────────────────────
-// Button — Primary design system atom.
-// Supports: primary, secondary, danger, ghost variants.
-// Supports: sm, md, lg sizes. Handles loading/disabled states.
+// Button — Tesla-inspired design system atom.
+// 4px radius, Electric Blue primary, 0.33s transitions.
 // ─────────────────────────────────────────────────────────
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline'
@@ -18,17 +17,17 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANT_STYLES: Record<Variant, string> = {
-  primary:   'bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-500/20',
-  secondary: 'bg-slate-100 hover:bg-slate-200 text-slate-700',
-  danger:    'bg-red-600 hover:bg-red-700 text-white shadow-sm shadow-red-500/20',
-  ghost:     'hover:bg-slate-100 text-slate-600',
-  outline:   'border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700',
+  primary:   'bg-[#3E6AE1] hover:bg-[#3459c7] text-white',
+  secondary: 'bg-white hover:bg-[#F4F4F4] text-[#393C41] border border-[#D0D1D2]',
+  danger:    'bg-[#ef4444] hover:bg-[#dc2626] text-white',
+  ghost:     'hover:bg-[#F4F4F4] text-[#5C5E62]',
+  outline:   'border border-[#D0D1D2] hover:border-[#393C41] hover:bg-[#F4F4F4] text-[#393C41]',
 }
 
 const SIZE_STYLES: Record<Size, string> = {
   sm: 'h-8  px-3   text-xs  gap-1.5',
   md: 'h-10 px-4   text-sm  gap-2',
-  lg: 'h-12 px-6   text-base gap-2.5',
+  lg: 'h-12 px-6   text-sm gap-2.5',
 }
 
 export function Button({
@@ -47,9 +46,9 @@ export function Button({
     <button
       disabled={isDisabled}
       className={[
-        'inline-flex items-center justify-center font-medium rounded-lg',
-        'transition-all duration-150 ease-in-out',
-        'focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:ring-offset-1',
+        'inline-flex items-center justify-center font-medium',
+        'rounded-[4px] transition-all duration-[330ms]',
+        'focus:outline-none focus:ring-2 focus:ring-[#3E6AE1]/30 focus:ring-offset-1',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         VARIANT_STYLES[variant],
         SIZE_STYLES[size],
@@ -59,7 +58,6 @@ export function Button({
       {...rest}
     >
       {loading ? (
-        /* Spinner */
         <svg
           className="animate-spin"
           width={size === 'sm' ? 14 : 16}

@@ -1,11 +1,11 @@
 import { type ReactNode, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Bell, User, Building, Home, CreditCard, MessageSquare, Menu, X } from 'lucide-react'
+import { Bell, User, Building, Home, CreditCard, MessageSquare, Menu, X, Users, Car, FileText, Dumbbell, QrCode } from 'lucide-react'
 import { useAuthStore } from '@/store/auth.store'
 
 // ─────────────────────────────────────────────────────────
-// ResidentLayout — Main consumer-facing layout for Owners/Tenants.
-// Uses a Top Navigation Bar rather than a heavy Admin sidebar.
+// ResidentLayout — Tesla-inspired consumer-facing layout.
+// Frosted-glass top nav, no shadows, 4px radii.
 // ─────────────────────────────────────────────────────────
 
 interface ResidentLayoutProps {
@@ -20,30 +20,40 @@ export function ResidentLayout({ children }: ResidentLayoutProps) {
   const tenantId = user?.tenantId ?? 'society'
 
   const NAV_LINKS = [
-    { name: 'Home',       path: `/${tenantId}/resident/home`,       icon: <Home size={18} /> },
-    { name: 'Payments',   path: `/${tenantId}/resident/finance`,    icon: <CreditCard size={18} /> },
-    { name: 'Helpdesk',   path: `/${tenantId}/resident/complaints`, icon: <MessageSquare size={18} /> },
-    { name: 'Community',  path: `/${tenantId}/resident/community`,  icon: <Building size={18} /> },
+    { name: 'Home',      path: `/${tenantId}/resident/home`,       icon: <Home size={18} /> },
+    { name: 'Payments',  path: `/${tenantId}/resident/finance`,    icon: <CreditCard size={18} /> },
+    { name: 'Visitors',  path: `/${tenantId}/resident/visitors`,   icon: <QrCode size={18} /> },
+    { name: 'Family',    path: `/${tenantId}/resident/family`,     icon: <Users size={18} /> },
+    { name: 'Helpdesk',  path: `/${tenantId}/resident/complaints`, icon: <MessageSquare size={18} /> },
+    { name: 'Amenities', path: `/${tenantId}/resident/amenities`,  icon: <Dumbbell size={18} /> },
+    { name: 'Community', path: `/${tenantId}/resident/community`,  icon: <Building size={18} /> },
+    { name: 'Notices',   path: `/${tenantId}/resident/notices`,    icon: <FileText size={18} /> },
   ]
 
   return (
-    <div className="min-h-screen bg-[var(--color-surface-50)] text-slate-900 flex flex-col">
-      {/* Top Navigation Bar */}
-      <nav className="bg-white border-b border-[var(--color-surface-200)] sticky top-0 z-30 shadow-sm">
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--color-light-ash)', color: 'var(--color-heading)' }}>
+      {/* Top Navigation */}
+      <nav
+        className="sticky top-0 z-30"
+        style={{ background: 'var(--color-white)', borderBottom: '1px solid var(--color-cloud)' }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             
-            {/* Logo & Brand */}
+            {/* Logo */}
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
+              <div
+                className="w-8 h-8 rounded-[4px] flex items-center justify-center text-white"
+                style={{ background: 'var(--color-electric-blue)' }}
+              >
                 <Building size={20} />
               </div>
-              <span className="font-bold text-lg text-slate-800 tracking-tight hidden sm:block">
+              <span className="font-medium text-lg hidden sm:block" style={{ color: 'var(--color-heading)' }}>
                 SmartSociety 360
               </span>
             </div>
 
-            {/* Desktop Navigation Links */}
+            {/* Desktop Nav */}
             <div className="hidden md:flex space-x-1">
               {NAV_LINKS.map((link) => {
                 const isActive = location.pathname.startsWith(link.path)
@@ -51,11 +61,11 @@ export function ResidentLayout({ children }: ResidentLayoutProps) {
                   <Link
                     key={link.name}
                     to={link.path}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      isActive 
-                        ? 'bg-blue-50 text-blue-700' 
-                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                    }`}
+                    className="flex items-center gap-2 px-3 py-2 rounded-[4px] text-sm font-medium transition-colors duration-[330ms]"
+                    style={{
+                      background: isActive ? '#3E6AE114' : 'transparent',
+                      color: isActive ? 'var(--color-electric-blue)' : 'var(--color-tertiary)',
+                    }}
                   >
                     {link.icon}
                     {link.name}
@@ -64,15 +74,24 @@ export function ResidentLayout({ children }: ResidentLayoutProps) {
               })}
             </div>
 
-            {/* Right Side Actions */}
+            {/* Right Actions */}
             <div className="flex items-center gap-3">
-              <button className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition relative">
+              <button
+                className="p-2 rounded-[4px] transition-colors duration-[330ms] relative"
+                style={{ color: 'var(--color-tertiary)' }}
+              >
                 <Bell size={20} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white" />
+                <span
+                  className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
+                  style={{ background: 'var(--color-electric-blue)' }}
+                />
               </button>
               
-              <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-slate-200">
-                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center overflow-hidden border border-blue-200 shadow-sm">
+              <div className="hidden sm:flex items-center gap-2 pl-3" style={{ borderLeft: '1px solid var(--color-cloud)' }}>
+                <div
+                  className="w-8 h-8 rounded-[4px] flex items-center justify-center text-white overflow-hidden"
+                  style={{ background: 'var(--color-electric-blue)' }}
+                >
                   {user?.avatarUrl ? (
                     <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
@@ -80,16 +99,17 @@ export function ResidentLayout({ children }: ResidentLayoutProps) {
                   )}
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-slate-700 leading-none">{user?.name}</span>
-                  <span className="text-[10px] text-slate-500 mt-0.5">{user?.role.replace('_', ' ')}</span>
+                  <span className="text-sm font-medium leading-none" style={{ color: 'var(--color-heading)' }}>{user?.name}</span>
+                  <span className="text-[10px] mt-0.5" style={{ color: 'var(--color-placeholder)' }}>{user?.role.replace('_', ' ')}</span>
                 </div>
               </div>
 
-              {/* Mobile Menu Toggle */}
+              {/* Mobile Toggle */}
               <div className="flex md:hidden items-center">
                 <button
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="p-2 text-slate-500 rounded-md hover:bg-slate-100 focus:outline-none"
+                  className="p-2 rounded-[4px]"
+                  style={{ color: 'var(--color-tertiary)' }}
                 >
                   {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
                 </button>
@@ -98,9 +118,9 @@ export function ResidentLayout({ children }: ResidentLayoutProps) {
           </div>
         </div>
 
-        {/* Mobile Navigation Menu */}
+        {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-200 bg-white">
+          <div className="md:hidden" style={{ borderTop: '1px solid var(--color-cloud)', background: 'var(--color-white)' }}>
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
               {NAV_LINKS.map((link) => {
                 const isActive = location.pathname.startsWith(link.path)
@@ -109,11 +129,11 @@ export function ResidentLayout({ children }: ResidentLayoutProps) {
                     key={link.name}
                     to={link.path}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 block px-3 py-2.5 rounded-md text-base font-medium ${
-                      isActive 
-                        ? 'bg-blue-50 text-blue-700' 
-                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                    }`}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-[4px] text-base font-medium transition-colors duration-[330ms]"
+                    style={{
+                      background: isActive ? '#3E6AE114' : 'transparent',
+                      color: isActive ? 'var(--color-electric-blue)' : 'var(--color-tertiary)',
+                    }}
                   >
                     {link.icon}
                     {link.name}
@@ -125,7 +145,7 @@ export function ResidentLayout({ children }: ResidentLayoutProps) {
         )}
       </nav>
 
-      {/* Main Content Render Area */}
+      {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 animate-fade-in-up">
         {children}
       </main>
