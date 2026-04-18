@@ -3,9 +3,10 @@ import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { UserPlus, Search, Loader2 } from 'lucide-react'
+import { UserPlus, Search } from 'lucide-react'
 import { apiClient } from '@/lib/api'
 import { AddMemberModal } from '../components/AddMemberModal'
+import { Select } from '@/components/ui/Select'
 
 // ─────────────────────────────────────────────────────────
 // MembersListPage — Live Resident & Tenant database.
@@ -77,65 +78,106 @@ export default function MembersListPage() {
           </div>
           
           <div className="flex gap-2 flex-wrap">
-             <select 
-               className="px-3 py-2 text-sm rounded-[4px] cursor-pointer outline-none" 
-               style={{ border: '1px solid var(--color-cloud)', color: 'var(--color-heading)', background: 'var(--color-light-ash)' }}
-               value={filterRole}
-               onChange={(e) => setFilterRole(e.target.value)}
-             >
-               {roles.map(r => <option key={r} value={r}>{r.replace('_', ' ')}</option>)}
-             </select>
+             <div className="w-36">
+               <Select 
+                 value={filterRole}
+                 onChange={setFilterRole}
+                 options={roles.map(r => ({ label: r.replace('_', ' '), value: r }))}
+               />
+             </div>
           </div>
         </div>
 
         {/* Database Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--color-cloud)' }}>
-                {['Name', 'Email Address', 'Phone', 'Role', 'Status', 'Assigned Flat'].map(h => (
-                  <th key={h} className="text-left px-4 py-3 font-medium text-xs" style={{ color: 'var(--color-placeholder)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center" style={{ color: 'var(--color-placeholder)' }}>
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Loader2 className="animate-spin" size={24} style={{ color: 'var(--color-electric-blue)' }} />
-                      Loading global member registry...
-                    </div>
-                  </td>
+        <div>
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--color-cloud)' }}>
+                  {['Name', 'Email Address', 'Phone', 'Role', 'Status', 'Assigned Flat'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 font-medium text-xs" style={{ color: 'var(--color-placeholder)' }}>{h}</th>
+                  ))}
                 </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center" style={{ color: 'var(--color-placeholder)' }}>No members found.</td>
-                </tr>
-              ) : (
+              </thead>
+              <tbody>
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid var(--color-cloud)' }}>
+                      {Array.from({ length: 6 }).map((_, cIdx) => (
+                        <td key={cIdx} className="px-4 py-4">
+                          <div className="h-4 bg-gray-200 rounded-[4px] animate-pulse w-full"></div>
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center" style={{ color: 'var(--color-placeholder)' }}>No members found.</td>
+                  </tr>
+                ) : (
+                  filtered.map((u: any) => (
+                    <tr key={u.id} className="transition-colors duration-[330ms] hover:bg-[#F4F4F4]" style={{ borderBottom: '1px solid var(--color-cloud)' }}>
+                      <td className="px-4 py-3 font-medium" style={{ color: 'var(--color-heading)' }}>{u.name}</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{u.email}</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{u.phone}</td>
+                      <td className="px-4 py-3">
+                        <Badge variant={u.role === 'SUPERVISOR' || u.role === 'SECRETARY' ? 'info' : 'neutral'}>
+                          {u.role.replace('_', ' ')}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                         <Badge variant={u.isActive ? 'success' : 'danger'}>
+                           {u.isActive ? 'ACTIVE' : 'INACTIVE'}
+                         </Badge>
+                      </td>
+                      <td className="px-4 py-3 font-medium" style={{ color: 'var(--color-heading)' }}>
+                        {u.unit ? `${u.unit.building?.name} - ${u.unit.flatNumber}` : <span style={{ color: 'var(--color-placeholder)' }}>—</span>}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden flex flex-col gap-3 p-4">
+             {loading ? (
+                Array.from({ length: 4 }).map((_, idx) => (
+                  <div key={idx} className="border p-4 rounded-[8px] bg-white shadow-sm flex flex-col gap-3 animate-pulse" style={{ borderColor: 'var(--color-cloud)' }}>
+                    <div className="h-4 bg-gray-200 rounded-[4px] w-1/2"></div>
+                    <div className="h-3 bg-gray-200 rounded-[4px] w-3/4"></div>
+                    <div className="h-8 bg-gray-200 rounded-[4px] w-full mt-2"></div>
+                  </div>
+                ))
+             ) : filtered.length === 0 ? (
+                <div className="py-8 text-center" style={{ color: 'var(--color-placeholder)' }}>No members found.</div>
+             ) : (
                 filtered.map((u: any) => (
-                  <tr key={u.id} className="transition-colors duration-[330ms] hover:bg-[#F4F4F4]" style={{ borderBottom: '1px solid var(--color-cloud)' }}>
-                    <td className="px-4 py-3 font-medium" style={{ color: 'var(--color-heading)' }}>{u.name}</td>
-                    <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{u.email}</td>
-                    <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{u.phone}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant={u.role === 'SUPERVISOR' || u.role === 'SECRETARY' ? 'info' : 'neutral'}>
-                        {u.role.replace('_', ' ')}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
+                  <div key={u.id} className="border p-4 rounded-[8px] bg-white shadow-sm flex flex-col gap-3" style={{ borderColor: 'var(--color-cloud)' }}>
+                     <div className="flex justify-between items-start gap-2">
+                       <div className="flex-1 min-w-0">
+                         <p className="font-medium text-sm truncate" style={{ color: 'var(--color-heading)' }}>{u.name}</p>
+                         <p className="text-xs mt-1 truncate" style={{ color: 'var(--color-tertiary)' }}>{u.email}</p>
+                         <p className="text-xs mt-0.5" style={{ color: 'var(--color-tertiary)' }}>{u.phone}</p>
+                       </div>
                        <Badge variant={u.isActive ? 'success' : 'danger'}>
                          {u.isActive ? 'ACTIVE' : 'INACTIVE'}
                        </Badge>
-                    </td>
-                    <td className="px-4 py-3 font-medium" style={{ color: 'var(--color-heading)' }}>
-                      {u.unit ? `${u.unit.building?.name} - ${u.unit.flatNumber}` : <span style={{ color: 'var(--color-placeholder)' }}>—</span>}
-                    </td>
-                  </tr>
+                     </div>
+                     <div className="flex justify-between items-center mt-1 pt-3 border-t border-slate-50">
+                       <Badge variant={u.role === 'SUPERVISOR' || u.role === 'SECRETARY' ? 'info' : 'neutral'}>
+                          {u.role.replace('_', ' ')}
+                       </Badge>
+                       <span className="text-xs font-medium" style={{ color: 'var(--color-heading)' }}>
+                         {u.unit ? `${u.unit.building?.name} - ${u.unit.flatNumber}` : 'No Flat'}
+                       </span>
+                     </div>
+                  </div>
                 ))
-              )}
-            </tbody>
-          </table>
+             )}
+          </div>
         </div>
       </Card>
       

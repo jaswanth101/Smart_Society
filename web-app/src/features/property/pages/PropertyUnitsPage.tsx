@@ -5,6 +5,8 @@ import { Building2, Search, Plus, Edit2, ChevronRight, Loader2 } from 'lucide-re
 import { apiClient } from '@/lib/api'
 import { AddBuildingModal } from '../components/AddBuildingModal'
 import { AddUnitModal } from '../components/AddUnitModal'
+import { EditBuildingModal } from '../components/EditBuildingModal'
+import { Badge } from '@/components/ui/Badge'
 
 // ─────────────────────────────────────────────────────────
 // PropertyUnitsPage — Live Backend Integration
@@ -28,6 +30,7 @@ export default function PropertyUnitsPage() {
   // Modals
   const [isAddUnitOpen, setIsAddUnitOpen] = useState(false)
   const [isAddBuildingOpen, setIsAddBuildingOpen] = useState(false)
+  const [buildingToEdit, setBuildingToEdit] = useState<{ id: string; name: string } | null>(null)
 
   const fetchData = async () => {
     try {
@@ -49,8 +52,7 @@ export default function PropertyUnitsPage() {
     fetchData()
   }, [])
 
-  // Derive wings dynamically from real buildings
-  const wings = ['ALL', ...buildings.map((b: any) => b.name)]
+
   
   // Filter logic
   const filtered = units.filter((u: any) => {
@@ -102,19 +104,38 @@ export default function PropertyUnitsPage() {
             />
           </div>
           
-          <div className="flex gap-2 flex-wrap">
-            {wings.map(w => (
-              <button
-                key={w}
-                onClick={() => setFilterWing(w)}
-                className="px-3 py-1.5 rounded-[4px] text-xs font-medium transition-colors duration-[330ms]"
-                style={{
-                  background: filterWing === w ? 'var(--color-electric-blue)' : 'var(--color-light-ash)',
-                  color: filterWing === w ? 'white' : 'var(--color-body)',
-                }}
-              >
-                {w === 'ALL' ? 'All wings' : w}
-              </button>
+          <div className="flex gap-2 flex-wrap items-center">
+            <button
+              onClick={() => setFilterWing('ALL')}
+              className="px-3 py-1.5 rounded-[4px] text-xs font-medium transition-colors duration-[330ms]"
+              style={{
+                background: filterWing === 'ALL' ? 'var(--color-electric-blue)' : 'var(--color-light-ash)',
+                color: filterWing === 'ALL' ? 'white' : 'var(--color-body)',
+              }}
+            >
+              All wings
+            </button>
+            {buildings.map((b: any) => (
+              <div key={b.id} className="flex items-center">
+                <button
+                  onClick={() => setFilterWing(b.name)}
+                  className="px-3 py-1.5 rounded-[4px] text-xs font-medium transition-colors duration-[330ms] flex items-center gap-1.5"
+                  style={{
+                    background: filterWing === b.name ? 'var(--color-electric-blue)' : 'var(--color-light-ash)',
+                    color: filterWing === b.name ? 'white' : 'var(--color-body)',
+                  }}
+                >
+                  {b.name}
+                </button>
+                {filterWing === b.name && (
+                  <button 
+                    onClick={() => setBuildingToEdit(b)}
+                    className="ml-1 p-1 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <Edit2 size={12} style={{ color: 'var(--color-tertiary)' }} />
+                  </button>
+                )}
+              </div>
             ))}
           </div>
 
@@ -136,68 +157,118 @@ export default function PropertyUnitsPage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--color-cloud)' }}>
-                {['Flat', 'Wing', 'Type', 'Sqft', 'Owner/Tenant', 'Status', ''].map(h => (
-                  <th key={h} className="text-left px-4 py-3 font-medium text-xs" style={{ color: 'var(--color-placeholder)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center" style={{ color: 'var(--color-placeholder)' }}>
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Loader2 className="animate-spin" size={24} style={{ color: 'var(--color-electric-blue)' }} />
-                      Loading property data...
-                    </div>
-                  </td>
+        {/* Table/Card Views */}
+        <div>
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--color-cloud)' }}>
+                  {['Flat', 'Wing', 'Type', 'Sqft', 'Owner/Tenant', 'Status', ''].map(h => (
+                    <th key={h} className="text-left px-4 py-3 font-medium text-xs" style={{ color: 'var(--color-placeholder)' }}>{h}</th>
+                  ))}
                 </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center" style={{ color: 'var(--color-placeholder)' }}>
-                    No units found matching your criteria.
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((u: any) => {
-                  const ownerObj = u.residents?.[0]; // Simplification for MVP
-                  
-                  return (
-                    <tr key={u.id} className="transition-colors duration-[330ms] hover:bg-[#F4F4F4] cursor-pointer" style={{ borderBottom: '1px solid var(--color-cloud)' }}>
-                      <td className="px-4 py-3 font-medium" style={{ color: 'var(--color-heading)' }}>{u.flatNumber}</td>
-                      <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{u.building?.name || '—'}</td>
-                      <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{u.type}</td>
-                      <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{u.sqft} sq.ft</td>
-                      
-                      <td className="px-4 py-3">
-                        {ownerObj ? (
-                           <div>
-                             <p className="font-medium leading-none" style={{ color: 'var(--color-heading)' }}>{ownerObj.name}</p>
-                             <p className="text-[11px] mt-1" style={{ color: 'var(--color-tertiary)' }}>{ownerObj.phone}</p>
-                           </div>
-                        ) : (
-                           <span style={{ color: 'var(--color-placeholder)' }}>Unassigned</span>
-                        )}
-                      </td>
-                      
-                      <td className="px-4 py-3">
-                        <Badge variant={STATUS_MAP[u.occupancy] ?? 'neutral'}>{u.occupancy}</Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <button className="p-1.5 rounded-[4px] transition-colors duration-[330ms]" style={{ color: 'var(--color-tertiary)' }}>
-                          <Edit2 size={14} />
-                        </button>
-                      </td>
+              </thead>
+              <tbody>
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid var(--color-cloud)' }}>
+                      {Array.from({ length: 7 }).map((_, cIdx) => (
+                        <td key={cIdx} className="px-4 py-4">
+                          <div className="h-4 bg-gray-200 rounded-[4px] animate-pulse w-full"></div>
+                        </td>
+                      ))}
                     </tr>
-                  )
+                  ))
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center" style={{ color: 'var(--color-placeholder)' }}>
+                      No units found matching your criteria.
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((u: any) => {
+                    const ownerObj = u.residents?.[0]; // Simplification for MVP
+                    
+                    return (
+                      <tr key={u.id} className="transition-colors duration-[330ms] hover:bg-[#F4F4F4] cursor-pointer" style={{ borderBottom: '1px solid var(--color-cloud)' }}>
+                        <td className="px-4 py-3 font-medium" style={{ color: 'var(--color-heading)' }}>{u.flatNumber}</td>
+                        <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{u.building?.name || '—'}</td>
+                        <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{u.type}</td>
+                        <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{u.sqft} sq.ft</td>
+                        
+                        <td className="px-4 py-3">
+                          {ownerObj ? (
+                             <div>
+                               <p className="font-medium leading-none" style={{ color: 'var(--color-heading)' }}>{ownerObj.name}</p>
+                               <p className="text-[11px] mt-1" style={{ color: 'var(--color-tertiary)' }}>{ownerObj.phone}</p>
+                             </div>
+                          ) : (
+                             <span style={{ color: 'var(--color-placeholder)' }}>Unassigned</span>
+                          )}
+                        </td>
+                        
+                        <td className="px-4 py-3">
+                          <Badge variant={STATUS_MAP[u.occupancy] ?? 'neutral'}>{u.occupancy}</Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <button className="p-1.5 rounded-[4px] transition-colors duration-[330ms]" style={{ color: 'var(--color-tertiary)' }}>
+                            <Edit2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden flex flex-col gap-3 p-4">
+            {loading ? (
+                Array.from({ length: 4 }).map((_, idx) => (
+                  <div key={idx} className="border p-4 rounded-[8px] bg-white shadow-sm flex flex-col gap-3 animate-pulse" style={{ borderColor: 'var(--color-cloud)' }}>
+                    <div className="h-4 bg-gray-200 rounded-[4px] w-1/3"></div>
+                    <div className="h-3 bg-gray-200 rounded-[4px] w-1/2"></div>
+                    <div className="h-8 bg-gray-200 rounded-[4px] w-full mt-2"></div>
+                  </div>
+                ))
+            ) : filtered.length === 0 ? (
+                <div className="py-8 text-center" style={{ color: 'var(--color-placeholder)' }}>No units found matching your criteria.</div>
+            ) : (
+                filtered.map((u: any) => {
+                    const ownerObj = u.residents?.[0];
+                    return (
+                      <div key={u.id} className="border p-4 rounded-[8px] bg-white shadow-sm flex flex-col gap-3" style={{ borderColor: 'var(--color-cloud)' }}>
+                        <div className="flex justify-between items-start gap-2">
+                           <div className="flex-1">
+                              <p className="font-medium text-sm" style={{ color: 'var(--color-heading)' }}>Flat {u.flatNumber}</p>
+                              <p className="text-xs mt-1" style={{ color: 'var(--color-tertiary)' }}>{u.building?.name || 'No Wing'} • {u.type} • {u.sqft} sq.ft</p>
+                           </div>
+                           <Badge variant={STATUS_MAP[u.occupancy] ?? 'neutral'}>{u.occupancy}</Badge>
+                        </div>
+                        <div className="flex justify-between items-center mt-1 pt-3 border-t" style={{ borderColor: 'var(--color-cloud)' }}>
+                           <div className="flex-1">
+                              <p className="text-[11px] uppercase tracking-wide font-semibold mb-1" style={{ color: 'var(--color-placeholder)' }}>Owner/Tenant</p>
+                              {ownerObj ? (
+                                 <div>
+                                   <p className="text-sm font-medium" style={{ color: 'var(--color-heading)' }}>{ownerObj.name}</p>
+                                   <p className="text-xs mt-0.5" style={{ color: 'var(--color-tertiary)' }}>{ownerObj.phone}</p>
+                                 </div>
+                              ) : (
+                                 <span className="text-xs" style={{ color: 'var(--color-placeholder)' }}>Unassigned</span>
+                              )}
+                           </div>
+                           <button className="p-2 rounded-[4px] transition-colors bg-gray-50 flex-shrink-0" style={{ color: 'var(--color-tertiary)' }}>
+                              <Edit2 size={16} />
+                           </button>
+                        </div>
+                      </div>
+                    )
                 })
-              )}
-            </tbody>
-          </table>
+            )}
+          </div>
         </div>
       </Card>
       
@@ -205,6 +276,12 @@ export default function PropertyUnitsPage() {
         isOpen={isAddBuildingOpen} 
         onClose={() => setIsAddBuildingOpen(false)} 
         onSuccess={fetchData} 
+      />
+      <EditBuildingModal
+        isOpen={!!buildingToEdit}
+        onClose={() => setBuildingToEdit(null)}
+        onSuccess={fetchData}
+        building={buildingToEdit}
       />
       <AddUnitModal 
         isOpen={isAddUnitOpen} 

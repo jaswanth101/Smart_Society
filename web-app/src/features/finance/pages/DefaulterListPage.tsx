@@ -18,9 +18,9 @@ export default function DefaulterListPage() {
     const fetchInvoices = async () => {
       try {
         const { data } = await apiClient.get('/finance/invoices')
-        // Filter strictly for overdue defaults
-        const overdue = data.filter((inv: any) => inv.status === 'OVERDUE')
-        setInvoices(overdue)
+        // Filter strictly for unpaid active invoices (pending or already overdue)
+        const activeDefaults = data.filter((inv: any) => inv.status === 'OVERDUE' || inv.status === 'PENDING')
+        setInvoices(activeDefaults)
       } catch (err) {
         console.error('Failed to fetch invoices', err)
       } finally {
@@ -92,26 +92,20 @@ export default function DefaulterListPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="py-8 text-center text-slate-500">Scanning financial ledgers...</td></tr>
+                Array.from({ length: 4 }).map((_, idx) => (
+                  <tr key={idx} style={{ borderBottom: '1px solid var(--color-cloud)' }}>
+                    {Array.from({ length: 6 }).map((_, cIdx) => (
+                      <td key={cIdx} className="px-4 py-4">
+                        <div className="h-4 bg-gray-200 rounded-[4px] animate-pulse w-full"></div>
+                      </td>
+                    ))}
+                  </tr>
+                ))
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={6} className="py-8 text-center text-slate-500">No overdue invoices found! Clean ledger.</td></tr>
               ) : filtered.map((d: any) => (
                 <tr key={d.id} className="transition-colors duration-[330ms] hover:bg-[#F4F4F4]" style={{ borderBottom: '1px solid var(--color-cloud)' }}>
                   <td className="px-4 py-3 font-medium" style={{ color: 'var(--color-heading)' }}>{d.unit?.flatNumber || 'Unknown Unit'}</td>
-                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-tertiary)' }}>{d.month} {d.year}</td>
-                  <td className="px-4 py-3 font-medium text-red-500">₹{Number(d.amount).toLocaleString()}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{new Date(d.dueDate).toLocaleDateString()}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant="danger">OVERDUE</Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button className="px-3 py-1.5 rounded-[4px] text-xs font-medium transition-colors duration-[330ms]"
-                      style={{ background: 'var(--color-light-ash)', color: 'var(--color-heading)' }}>
-                      Send reminder
-                    </button>
-                  </td>
-                </tr>
-              ))}
             </tbody>
           </table>
         </div>

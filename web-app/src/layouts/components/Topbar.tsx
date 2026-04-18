@@ -1,4 +1,4 @@
-import { Bell, Search, Sun, Moon } from 'lucide-react'
+import { Bell, Search, Sun, Moon, Menu } from 'lucide-react'
 import { useState } from 'react'
 import { useAuthStore } from '@/store/auth.store'
 
@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/auth.store'
 // Topbar — Tesla-inspired: white bg, no shadow, frosted glass
 // ─────────────────────────────────────────────────────────
 
-export function Topbar() {
+export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
   const [dark, setDark]       = useState(false)
   const [search, setSearch]   = useState('')
   const user = useAuthStore((s) => s.user)
@@ -25,6 +25,16 @@ export function Topbar() {
       }}
       role="banner"
     >
+      {/* Mobile Menu Toggle */}
+      <button 
+        onClick={onMenuClick}
+        className="md:hidden p-2 -ml-2 mr-2 rounded-[4px] transition-colors"
+        style={{ color: 'var(--color-tertiary)' }}
+        aria-label="Open menu"
+      >
+        <Menu size={20} />
+      </button>
+
       {/* Search */}
       <div className="relative flex-1 max-w-sm">
         <Search

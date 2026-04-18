@@ -16,6 +16,19 @@ export class PropertyService {
     });
   }
 
+  async updateBuilding(tenantId: string, id: string, name: string) {
+    // Make sure building exists and belongs to tenant
+    const existing = await this.prisma.building.findFirst({
+      where: { id, tenantId }
+    });
+    if (!existing) throw new NotFoundException('Building not found');
+
+    return this.prisma.building.update({
+      where: { id },
+      data: { name }
+    });
+  }
+
   async findAllBuildings(tenantId: string) {
     return this.prisma.building.findMany({
       where: { tenantId },

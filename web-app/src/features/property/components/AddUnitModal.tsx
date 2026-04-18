@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Home, X } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 import { apiClient } from '@/lib/api'
 
 interface AddUnitModalProps {
@@ -69,16 +70,12 @@ export function AddUnitModal({ isOpen, onClose, onSuccess, buildings }: AddUnitM
           
           <div className="space-y-1 md:col-span-2">
              <label className="block text-xs font-medium" style={{ color: 'var(--color-heading)' }}>Building Wing</label>
-             <select 
-               className="w-full px-3 py-2 text-sm rounded-[4px]" 
-               style={{ border: '1px solid var(--color-cloud)', color: 'var(--color-heading)' }}
+             <Select 
+               options={buildings.map(b => ({ value: b.id, label: b.name }))}
                value={buildingId}
-               onChange={(e) => setBuildingId(e.target.value)}
-               required
-             >
-               <option value="" disabled>Select a building</option>
-               {buildings.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-             </select>
+               onChange={setBuildingId}
+               placeholder="Select a building..."
+             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -89,19 +86,18 @@ export function AddUnitModal({ isOpen, onClose, onSuccess, buildings }: AddUnitM
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
                <label className="block text-xs font-medium" style={{ color: 'var(--color-heading)' }}>Unit Type</label>
-               <select 
-                 className="w-full px-3 py-2 text-sm rounded-[4px]" 
-                 style={{ border: '1px solid var(--color-cloud)', color: 'var(--color-heading)' }}
+               <Select 
+                 options={[
+                   { value: 'BHK1', label: '1 BHK' },
+                   { value: 'BHK2', label: '2 BHK' },
+                   { value: 'BHK3', label: '3 BHK' },
+                   { value: 'BHK4', label: '4 BHK' },
+                   { value: 'PENTHOUSE', label: 'Penthouse' },
+                   { value: 'VILLA', label: 'Villa' },
+                 ]}
                  value={type}
-                 onChange={(e) => setType(e.target.value)}
-               >
-                 <option value="BHK1">1 BHK</option>
-                 <option value="BHK2">2 BHK</option>
-                 <option value="BHK3">3 BHK</option>
-                 <option value="BHK4">4 BHK</option>
-                 <option value="PENTHOUSE">Penthouse</option>
-                 <option value="VILLA">Villa</option>
-               </select>
+                 onChange={setType}
+               />
             </div>
             <Input id="u-sqft" type="number" label="Square Feet" placeholder="e.g. 1200" value={sqft} onChange={(e) => setSqft(e.target.value)} required />
           </div>

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 
@@ -25,6 +25,17 @@ export class PropertyController {
     @CurrentUser('tenantId') tenantId: string,
   ) {
     return this.propertyService.createBuilding(tenantId, createBuildingDto);
+  }
+
+  @Post('buildings/:id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.SECRETARY)
+  @ApiOperation({ summary: 'Update an existing building' })
+  updateBuilding(
+    @Body() body: { name: string },
+    @CurrentUser('tenantId') tenantId: string,
+    @Param('id') id: string,
+  ) {
+    return this.propertyService.updateBuilding(tenantId, id, body.name);
   }
 
   @Get('buildings')

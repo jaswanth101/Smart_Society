@@ -49,6 +49,13 @@ export class FinanceController {
     return this.financeService.createInvoice(tenantId, dto);
   }
 
+  @Post('invoices/generate-batch')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.TREASURER)
+  @ApiOperation({ summary: 'Auto-generate monthly invoices for all units physically present in the PostgreSQL database' })
+  generateMonthlyInvoices(@CurrentUser('tenantId') tenantId: string) {
+    return this.financeService.generateMonthlyInvoices(tenantId);
+  }
+
   @Get('invoices')
   @ApiOperation({ summary: 'List invoices with optional filter by unit' })
   @ApiQuery({ name: 'unitId', required: false, type: String })

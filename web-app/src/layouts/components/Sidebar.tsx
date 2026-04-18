@@ -44,7 +44,7 @@ const SOCIETY_ITEMS: NavItem[] = [
   { label: 'Settings',       icon: Settings,        path: (t) => `/${t}/admin/settings`,              roles: [UserRole.PRESIDENT, UserRole.SECRETARY] },
 ]
 
-export function Sidebar() {
+export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, setMobileOpen: (v: boolean) => void }) {
   const [collapsed, setCollapsed] = useState(false)
   const { tenantId = '' } = useParams<{ tenantId: string }>()
   const user   = useAuthStore((s) => s.user)
@@ -58,7 +58,9 @@ export function Sidebar() {
 
   return (
     <aside
-      className="flex flex-col shrink-0 h-screen transition-all duration-[330ms] ease-in-out"
+      className={`fixed md:relative z-50 flex flex-col shrink-0 h-screen transition-all duration-[330ms] ease-in-out ${
+        mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+      }`}
       style={{
         width: collapsed ? '4.5rem' : '16rem',
         background: 'var(--sidebar-bg)',
@@ -101,6 +103,7 @@ export function Sidebar() {
               `nav-link ${isActive ? 'active' : ''}`
             }
             title={collapsed ? item.label : undefined}
+            onClick={() => setMobileOpen(false)}
           >
             <item.icon size={18} className="nav-icon shrink-0" />
             {!collapsed && (

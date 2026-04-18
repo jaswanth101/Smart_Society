@@ -59,6 +59,52 @@ export class FinanceService {
     });
   }
 
+  async generateMonthlyInvoices(tenantId: string) {
+    const rules = await this.prisma.feeRule.findMany({ where: { tenantId } });
+    if (!rules.length) throw new NotFoundException('No fee rules configured. Configure fee rules first.');
+
+    const units = await this.prisma.unit.findMany({ where: { tenantId } });
+    
+    const now = new Date();
+    const month = now.toLocaleString('default', { month: 'long' });
+    const year = now.getFullYear();
+
+    let createdCount = 0;
+
+    for (const unit of units) {
+      // Find exact rule for UnitType, or fallback to the very first rule if someone misconfigured it.
+      const rule = rules.find(r => r.unitType === unit.type) || rules[0];
+      
+      const exists = await this.prisma.invoice.findFirst({
+        where: { unitId: unit.id, month, year }
+      });
+
+      if (!exists) {
+        const dueDate = new Date();
+        dueDate.setDate(rule.dueDay);
+        // If due date has already passed this month, push to next month
+        if (dueDate < now) {
+          dueDate.setMonth(dueDate.getMonth() + 1);
+        }
+
+        await this.prisma.invoice.create({
+          data: {
+            tenantId,
+            unitId: unit.id,
+            amount: rule.baseAmount,
+            dueDate,
+            month,
+            year,
+            status: 'PENDING'
+          }
+        });
+        createdCount++;
+      }
+    }
+    
+    return { message: `Generated ${createdCount} invoices for ${month} ${year}.`, count: createdCount, month, year };
+  }
+
   // ── Expenses ────────────────────────────────────────────
 
   async createExpense(tenantId: string, dto: CreateExpenseDto) {
