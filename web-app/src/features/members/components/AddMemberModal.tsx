@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { UserPlus, X } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 import { apiClient } from '@/lib/api'
 
 interface AddMemberModalProps {
@@ -83,31 +84,29 @@ export function AddMemberModal({ isOpen, onClose, onSuccess }: AddMemberModalPro
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
                <label className="block text-xs font-medium" style={{ color: 'var(--color-heading)' }}>Role Designation</label>
-               <select 
-                 className="w-full px-3 py-2 text-sm rounded-[4px]" 
-                 style={{ border: '1px solid var(--color-cloud)', color: 'var(--color-heading)' }}
+               <Select 
+                 options={[
+                   { value: 'FLAT_OWNER', label: 'Flat Owner' },
+                   { value: 'TENANT', label: 'Tenant' },
+                   { value: 'SECURITY_GUARD', label: 'Security Guard' },
+                   { value: 'SECRETARY', label: 'Secretary' },
+                   { value: 'SUPERVISOR', label: 'Maintenance Spv' },
+                 ]}
                  value={role}
-                 onChange={(e) => setRole(e.target.value)}
-               >
-                 <option value="FLAT_OWNER">Flat Owner</option>
-                 <option value="TENANT">Tenant</option>
-                 <option value="SECURITY_GUARD">Security Guard</option>
-                 <option value="SECRETARY">Secretary</option>
-                 <option value="SUPERVISOR">Maintenance Spv</option>
-               </select>
+                 onChange={setRole}
+               />
             </div>
             
             <div className="space-y-1">
                <label className="block text-xs font-medium" style={{ color: 'var(--color-heading)' }}>Assign to Flat (Optional)</label>
-               <select 
-                 className="w-full px-3 py-2 text-sm rounded-[4px]" 
-                 style={{ border: '1px solid var(--color-cloud)', color: 'var(--color-heading)' }}
+               <Select 
+                 options={[
+                   { value: '', label: 'Unassigned' },
+                   ...units.map(u => ({ value: u.id, label: `${u.building?.name} - ${u.flatNumber}` }))
+                 ]}
                  value={unitId}
-                 onChange={(e) => setUnitId(e.target.value)}
-               >
-                 <option value="">Unassigned</option>
-                 {units.map(u => <option key={u.id} value={u.id}>{u.building?.name} - {u.flatNumber}</option>)}
-               </select>
+                 onChange={setUnitId}
+               />
             </div>
           </div>
           
