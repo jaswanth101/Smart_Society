@@ -47,7 +47,7 @@ export class VisitorsController {
     @CurrentUser('unitId') currentUnitId: string,
     @Query('unitId') filterUnitId?: string,
   ) {
-    const isAdmin = [UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.SECRETARY, UserRole.SECURITY_GUARD].includes(role as UserRole);
+    const isAdmin = ([UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.SECRETARY, UserRole.SECURITY_GUARD] as UserRole[]).includes(role as UserRole);
     // Residents override query filter to only see their own hostUnitId
     const targetUnit = isAdmin ? filterUnitId : currentUnitId;
     return this.visitorsService.findAll(tenantId, targetUnit);

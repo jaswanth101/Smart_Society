@@ -1,68 +1,87 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { Card } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
-import { Building2, Search, Plus, Edit2, ChevronRight } from 'lucide-react'
+import { Building2, Search, Plus, Edit2, ChevronRight, Loader2 } from 'lucide-react'
+import { apiClient } from '@/lib/api'
+import { AddBuildingModal } from '../components/AddBuildingModal'
+import { AddUnitModal } from '../components/AddUnitModal'
 
 // ─────────────────────────────────────────────────────────
-// PropertyUnitsPage — Tesla-inspired flat/unit management
+// PropertyUnitsPage — Live Backend Integration
 // ─────────────────────────────────────────────────────────
 
-type Unit = {
-  id: string
-  flatNo: string
-  wing: string
-  floor: number
-  type: string
-  owner: string
-  phone: string
-  status: 'OCCUPIED' | 'VACANT' | 'RENTED'
-  dues: number
-}
-
-const MOCK_UNITS: Unit[] = [
-  { id: 'u1', flatNo: 'A-101', wing: 'Tower A', floor: 1, type: '2BHK', owner: 'Rajesh Iyer', phone: '+91 98765 43210', status: 'OCCUPIED', dues: 0 },
-  { id: 'u2', flatNo: 'A-201', wing: 'Tower A', floor: 2, type: '3BHK', owner: 'Priya Sharma', phone: '+91 87654 32109', status: 'RENTED', dues: 4500 },
-  { id: 'u3', flatNo: 'B-304', wing: 'Tower B', floor: 3, type: '2BHK', owner: 'Sanjay Kumar', phone: '+91 76543 21098', status: 'OCCUPIED', dues: 0 },
-  { id: 'u4', flatNo: 'B-401', wing: 'Tower B', floor: 4, type: '1BHK', owner: '—', phone: '—', status: 'VACANT', dues: 0 },
-  { id: 'u5', flatNo: 'C-102', wing: 'Tower C', floor: 1, type: '3BHK', owner: 'David D', phone: '+91 65432 10987', status: 'OCCUPIED', dues: 9000 },
-  { id: 'u6', flatNo: 'C-503', wing: 'Tower C', floor: 5, type: '2BHK', owner: 'Alisha Verma', phone: '+91 54321 09876', status: 'RENTED', dues: 0 },
-]
-
-const STATUS_MAP: Record<string, 'success' | 'warning' | 'neutral'> = {
+const STATUS_MAP: Record<string, 'success' | 'warning' | 'neutral' | 'danger'> = {
   OCCUPIED: 'success',
-  RENTED: 'info' as any,
+  RENTED: 'warning',
   VACANT: 'neutral',
 }
 
 export default function PropertyUnitsPage() {
   const [search, setSearch] = useState('')
   const [filterWing, setFilterWing] = useState('ALL')
+  
+  // Real Data State
+  const [units, setUnits] = useState<any[]>([])
+  const [buildings, setBuildings] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const wings = ['ALL', ...new Set(MOCK_UNITS.map(u => u.wing))]
-  const filtered = MOCK_UNITS.filter(u => {
-    const matchSearch = u.flatNo.toLowerCase().includes(search.toLowerCase()) || u.owner.toLowerCase().includes(search.toLowerCase())
-    const matchWing = filterWing === 'ALL' || u.wing === filterWing
+  // Modals
+  const [isAddUnitOpen, setIsAddUnitOpen] = useState(false)
+  const [isAddBuildingOpen, setIsAddBuildingOpen] = useState(false)
+
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const [bRes, uRes] = await Promise.all([
+        apiClient.get('/property/buildings'),
+        apiClient.get('/property/units')
+      ])
+      setBuildings(bRes.data)
+      setUnits(uRes.data)
+    } catch (err) {
+      console.error('Failed to fetch property data:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  // Derive wings dynamically from real buildings
+  const wings = ['ALL', ...buildings.map((b: any) => b.name)]
+  
+  // Filter logic
+  const filtered = units.filter((u: any) => {
+    const flatStr = String(u.flatNumber).toLowerCase()
+    const ownerStr = u.residents?.[0]?.name?.toLowerCase() || ''
+    const matchSearch = flatStr.includes(search.toLowerCase()) || ownerStr.includes(search.toLowerCase())
+    const matchWing = filterWing === 'ALL' || u.building?.name === filterWing
     return matchSearch && matchWing
   })
+
+  // Summary Metrics
+  const totalOccupied = units.filter((u: any) => u.occupancy === 'OCCUPIED' || u.occupancy === 'RENTED').length
+  const totalVacant = units.filter((u: any) => u.occupancy === 'VACANT').length
 
   return (
     <DashboardLayout>
       <div className="mb-8">
         <h1 className="text-[40px] font-medium leading-[1.2]" style={{ color: 'var(--color-heading)' }}>Property & units</h1>
-        <p className="text-sm mt-2" style={{ color: 'var(--color-tertiary)' }}>Manage zones, wings, and flat mapping across the society.</p>
+        <p className="text-sm mt-2" style={{ color: 'var(--color-tertiary)' }}>Manage zones, wings, and real flat mappings across the society.</p>
       </div>
 
       {/* Summary strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {[
-          { label: 'Total units', value: '486' },
-          { label: 'Occupied', value: '412' },
-          { label: 'Rented', value: '58' },
-          { label: 'Vacant', value: '16' },
+          { label: 'Total units', value: units.length },
+          { label: 'Occupied/Rented', value: totalOccupied },
+          { label: 'Vacant', value: totalVacant },
+          { label: 'Buildings (Wings)', value: buildings.length },
         ].map(s => (
           <div key={s.label} className="rounded-[12px] p-4 text-center" style={{ background: 'var(--color-white)' }}>
-            <p className="text-2xl font-medium" style={{ color: 'var(--color-heading)' }}>{s.value}</p>
+            <p className="text-2xl font-medium" style={{ color: 'var(--color-heading)' }}>{loading ? '-' : s.value}</p>
             <p className="text-xs mt-1" style={{ color: 'var(--color-tertiary)' }}>{s.label}</p>
           </div>
         ))}
@@ -82,6 +101,7 @@ export default function PropertyUnitsPage() {
               style={{ border: '1px solid var(--color-cloud)', color: 'var(--color-heading)' }}
             />
           </div>
+          
           <div className="flex gap-2 flex-wrap">
             {wings.map(w => (
               <button
@@ -97,12 +117,23 @@ export default function PropertyUnitsPage() {
               </button>
             ))}
           </div>
-          <button
-            className="ml-auto px-4 py-2 rounded-[4px] text-sm font-medium text-white flex items-center gap-1.5 transition-colors duration-[330ms] shrink-0"
-            style={{ background: 'var(--color-electric-blue)' }}
-          >
-            <Plus size={16} /> Add unit
-          </button>
+
+          <div className="ml-auto flex gap-2">
+            <button
+              onClick={() => setIsAddBuildingOpen(true)}
+              className="px-4 py-2 rounded-[4px] text-sm font-medium transition-colors duration-[330ms]"
+              style={{ background: 'var(--color-light-ash)', color: 'var(--color-heading)' }}
+            >
+              Add Building
+            </button>
+            <button
+              onClick={() => setIsAddUnitOpen(true)}
+              className="px-4 py-2 rounded-[4px] text-sm font-medium text-white flex items-center gap-1.5 transition-colors duration-[330ms]"
+              style={{ background: 'var(--color-electric-blue)' }}
+            >
+              <Plus size={16} /> Add Unit
+            </button>
+          </div>
         </div>
 
         {/* Table */}
@@ -110,32 +141,77 @@ export default function PropertyUnitsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: '1px solid var(--color-cloud)' }}>
-                {['Flat', 'Wing', 'Type', 'Owner', 'Phone', 'Status', 'Dues', ''].map(h => (
+                {['Flat', 'Wing', 'Type', 'Sqft', 'Owner/Tenant', 'Status', ''].map(h => (
                   <th key={h} className="text-left px-4 py-3 font-medium text-xs" style={{ color: 'var(--color-placeholder)' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.map(u => (
-                <tr key={u.id} className="transition-colors duration-[330ms] hover:bg-[#F4F4F4] cursor-pointer" style={{ borderBottom: '1px solid var(--color-cloud)' }}>
-                  <td className="px-4 py-3 font-medium" style={{ color: 'var(--color-heading)' }}>{u.flatNo}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{u.wing}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{u.type}</td>
-                  <td className="px-4 py-3 font-medium" style={{ color: 'var(--color-heading)' }}>{u.owner}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--color-tertiary)' }}>{u.phone}</td>
-                  <td className="px-4 py-3"><Badge variant={STATUS_MAP[u.status] ?? 'neutral'}>{u.status.toLowerCase()}</Badge></td>
-                  <td className="px-4 py-3 font-medium" style={{ color: u.dues > 0 ? 'var(--color-danger)' : 'var(--color-success)' }}>
-                    {u.dues > 0 ? `₹${u.dues.toLocaleString()}` : 'Clear'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <button className="p-1.5 rounded-[4px] transition-colors duration-[330ms]" style={{ color: 'var(--color-tertiary)' }}><Edit2 size={14} /></button>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center" style={{ color: 'var(--color-placeholder)' }}>
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Loader2 className="animate-spin" size={24} style={{ color: 'var(--color-electric-blue)' }} />
+                      Loading property data...
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center" style={{ color: 'var(--color-placeholder)' }}>
+                    No units found matching your criteria.
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((u: any) => {
+                  const ownerObj = u.residents?.[0]; // Simplification for MVP
+                  
+                  return (
+                    <tr key={u.id} className="transition-colors duration-[330ms] hover:bg-[#F4F4F4] cursor-pointer" style={{ borderBottom: '1px solid var(--color-cloud)' }}>
+                      <td className="px-4 py-3 font-medium" style={{ color: 'var(--color-heading)' }}>{u.flatNumber}</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{u.building?.name || '—'}</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{u.type}</td>
+                      <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{u.sqft} sq.ft</td>
+                      
+                      <td className="px-4 py-3">
+                        {ownerObj ? (
+                           <div>
+                             <p className="font-medium leading-none" style={{ color: 'var(--color-heading)' }}>{ownerObj.name}</p>
+                             <p className="text-[11px] mt-1" style={{ color: 'var(--color-tertiary)' }}>{ownerObj.phone}</p>
+                           </div>
+                        ) : (
+                           <span style={{ color: 'var(--color-placeholder)' }}>Unassigned</span>
+                        )}
+                      </td>
+                      
+                      <td className="px-4 py-3">
+                        <Badge variant={STATUS_MAP[u.occupancy] ?? 'neutral'}>{u.occupancy}</Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button className="p-1.5 rounded-[4px] transition-colors duration-[330ms]" style={{ color: 'var(--color-tertiary)' }}>
+                          <Edit2 size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>
       </Card>
+      
+      <AddBuildingModal 
+        isOpen={isAddBuildingOpen} 
+        onClose={() => setIsAddBuildingOpen(false)} 
+        onSuccess={fetchData} 
+      />
+      <AddUnitModal 
+        isOpen={isAddUnitOpen} 
+        onClose={() => setIsAddUnitOpen(false)} 
+        onSuccess={fetchData}
+        buildings={buildings}
+      />
     </DashboardLayout>
   )
 }

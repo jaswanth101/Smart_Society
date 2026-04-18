@@ -1,4 +1,4 @@
-import { passport } from 'passport';
+import passport from 'passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';

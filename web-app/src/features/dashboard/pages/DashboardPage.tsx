@@ -43,9 +43,11 @@ const MOCK_PENDING = [
 
 import { useEffect, useState } from 'react'
 import { apiClient } from '@/lib/api'
+import { useAuthStore } from '@/store/authStore'
 
 export default function DashboardPage() {
   const { tenantId } = useParams<{ tenantId: string }>()
+  const user = useAuthStore((s) => s.user)
   
   // Real API state for helpdesk
   const [complaints, setComplaints] = useState<any[]>([])
@@ -71,10 +73,10 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-[40px] font-medium leading-[1.2]" style={{ color: 'var(--color-heading)' }}>
-          Society dashboard
+          Welcome back, {user?.name?.split(' ')[0] || 'President'}
         </h1>
         <p className="text-sm mt-2" style={{ color: 'var(--color-tertiary)' }}>
-          {tenantId ?? 'Alpha Society'} · Live view as of {new Date().toLocaleTimeString('en-IN')}
+          {tenantId} System · Live view as of {new Date().toLocaleTimeString('en-IN')}
         </p>
       </div>
 

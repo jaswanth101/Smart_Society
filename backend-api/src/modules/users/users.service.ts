@@ -2,10 +2,14 @@ import { Injectable, ConflictException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationsService: NotificationsService
+  ) {}
 
   async create(tenantId: string, createUserDto: CreateUserDto) {
     const { email, phone, password, ...rest } = createUserDto;
@@ -20,9 +24,16 @@ export class UsersService {
       throw new ConflictException('User with that email or phone already exists.');
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Generate secure password if not explicitly provided
+    let rawPassword = password;
+    if (!rawPassword) {
+      const randomSuffix = Math.random().toString(36).slice(-4).toUpperCase();
+      rawPassword = `${createUserDto.name.split(' ')[0]}-${randomSuffix}`;
+    }
 
-    return this.prisma.user.create({
+    const hashedPassword = await bcrypt.hash(rawPassword, 10);
+
+    const newUser = await this.prisma.user.create({
       data: {
         email,
         phone,
@@ -41,6 +52,22 @@ export class UsersService {
         createdAt: true,
       },
     });
+
+    // Fire welcome email workflow if they didn't manually set a password
+    if (!password) {
+      // Get the tenant's exact society name
+      const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+      const societyName = tenant ? tenant.name : 'your new Society';
+      
+      this.notificationsService.sendWelcomeEmail(
+        newUser.email,
+        newUser.name,
+        societyName,
+        rawPassword
+      );
+    }
+
+    return newUser;
   }
 
   async findAllByTenant(tenantId: string) {

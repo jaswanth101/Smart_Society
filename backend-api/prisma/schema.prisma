@@ -150,6 +150,12 @@ enum AttendanceStatus {
   LATE
 }
 
+enum NodeStatus {
+  ONLINE
+  OFFLINE
+  MAINTENANCE
+}
+
 // ── CORE TABLES ────────────────────────────────────────────
 
 model Tenant {
@@ -161,6 +167,7 @@ model Tenant {
   state           String   @default("")
   totalUnits      Int      @default(0)
   subscriptionTier String  @default("STANDARD")
+  subscriptionPrice Float  @default(0)
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -184,6 +191,7 @@ model Tenant {
   visitors        Visitor[]
   gateLogs        GateLog[]
   tasks           Task[]
+  edgeNodes       EdgeNode[]
 
   @@map("tenants")
 }
@@ -535,4 +543,24 @@ model Vote {
 
   @@unique([userId, electionId])
   @@map("votes")
+}
+
+// ── INFRASTRUCTURE & IoT ───────────────────────────────────
+
+model EdgeNode {
+  id            String     @id @default(uuid())
+  macAddress    String     @unique
+  localIp       String?
+  status        NodeStatus @default(OFFLINE)
+  lastHeartbeat DateTime   @default(now())
+  cpuUsage      Float      @default(0)
+  ramUsage      String?
+  
+  tenantId      String
+  tenant        Tenant     @relation(fields: [tenantId], references: [id])
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@map("edge_nodes")
 }

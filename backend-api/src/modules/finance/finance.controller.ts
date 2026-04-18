@@ -59,7 +59,7 @@ export class FinanceController {
     @Query('unitId') filterUnitId?: string,
   ) {
     // If the user is a normal resident, force the query to their own unit
-    const isAdmin = [UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.TREASURER, UserRole.SECRETARY].includes(role as UserRole);
+    const isAdmin = ([UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.TREASURER, UserRole.SECRETARY] as UserRole[]).includes(role as UserRole);
     const targetUnit = isAdmin ? filterUnitId : currentUnitId;
 
     return this.financeService.findAllInvoices(tenantId, targetUnit);

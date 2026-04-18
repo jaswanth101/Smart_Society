@@ -29,6 +29,13 @@ export class TenantsController {
     return this.tenantsService.findAll();
   }
 
+  @Get('analytics')
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get global SaaS platform MRR and telemetry analytics' })
+  getAnalytics() {
+    return this.tenantsService.getGlobalAnalytics();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a specific society details' })
   // Any user can fetch their own tenant details (we should refine access control here later)

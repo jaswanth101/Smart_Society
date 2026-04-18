@@ -1,4 +1,12 @@
 import { Module } from '@nestjs/common';
+import { IotController } from './iot.controller';
+import { IotService } from './iot.service';
+import { PrismaModule } from '../../common/prisma/prisma.module';
 
-@Module({})
+@Module({
+  imports: [PrismaModule],
+  controllers: [IotController],
+  providers: [IotService],
+  exports: [IotService],
+})
 export class IoTModule {}

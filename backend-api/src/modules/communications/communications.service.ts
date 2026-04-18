@@ -9,11 +9,15 @@ export class CommunicationsService {
   // ── Notices (Digital Bulletin Board) ─────────────────────
 
   async createNotice(tenantId: string, authorId: string, dto: CreateNoticeDto) {
+    // Map DTO 'content' to Prisma 'body'
+    const { content, ...restProps } = dto as any;
+    
     return this.prisma.notice.create({
       data: {
-        ...dto,
+        ...restProps,
+        body: content,
         tenantId,
-        authorId
+        authorName: authorId 
       }
     });
   }
@@ -22,24 +26,21 @@ export class CommunicationsService {
     return this.prisma.notice.findMany({
       where: { tenantId },
       orderBy: { createdAt: 'desc' },
-      include: {
-        author: { select: { name: true, role: true } }
-      }
     });
   }
 
   // ── Broadcasts (Push Notifications / SMS) ────────────────
 
   async dispatchBroadcast(tenantId: string, senderId: string, dto: CreateBroadcastDto) {
-    // MVP: Stub the external API out. We just log it successfully to the database.
-    // In production, you would grab all User pushTokens for this tenantId and send them to Firebase/Twilio here.
+    // Map DTO 'body' to Prisma 'message'
+    const { body, ...restProps } = dto as any;
 
     return this.prisma.broadcast.create({
       data: {
-        ...dto,
+        ...restProps,
+        message: body,
         tenantId,
-        senderId,
-        successCount: 1 // Stub metric
+        sentBy: senderId,
       }
     });
   }
@@ -48,9 +49,6 @@ export class CommunicationsService {
     return this.prisma.broadcast.findMany({
       where: { tenantId },
       orderBy: { sentAt: 'desc' },
-      include: {
-        sender: { select: { name: true } }
-      }
     });
   }
 }

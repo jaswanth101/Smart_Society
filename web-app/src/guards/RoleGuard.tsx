@@ -1,7 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from '@/store/auth.store'
 import { ROUTES } from '@/config/routes.config'
-import type { UserRole } from '@/types'
+import { UserRole } from '@/types'
 
 // ─────────────────────────────────────────────────────────
 // RoleGuard — Checks the user's role against an allowlist.
@@ -19,7 +19,11 @@ interface RoleGuardProps {
 export function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
   const user = useAuthStore((s) => s.user)
 
-  if (!user || !allowedRoles.includes(user.role)) {
+  // Super Admins should have omni-access to all routes to manage the tenants
+  const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN
+  const isAllowed = user && (allowedRoles.includes(user.role) || isSuperAdmin)
+
+  if (!isAllowed) {
     return <Navigate to={ROUTES.UNAUTHORIZED} replace />
   }
 

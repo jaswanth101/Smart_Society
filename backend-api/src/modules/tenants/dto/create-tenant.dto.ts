@@ -37,4 +37,23 @@ export class CreateTenantDto {
   @IsString()
   @IsOptional()
   subscriptionTier?: string;
+
+  @ApiPropertyOptional({ example: 10000 })
+  @IsOptional()
+  subscriptionPrice?: number;
+
+  @ApiProperty({ example: 'Ravi Kumar' })
+  @IsString()
+  @IsNotEmpty()
+  adminName: string;
+
+  @ApiProperty({ example: 'ravi@galaxy.com' })
+  @IsString()
+  @IsNotEmpty()
+  adminEmail: string;
+
+  @ApiProperty({ example: '+919876543210' })
+  @IsString()
+  @IsNotEmpty()
+  adminPhone: string;
 }

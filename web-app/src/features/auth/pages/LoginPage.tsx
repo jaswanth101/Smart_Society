@@ -170,27 +170,7 @@ export default function LoginPage() {
                     </button>
                   }
                 />
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium" style={{ color: 'var(--color-heading)' }}>Test role override (mock)</label>
-                  <select
-                    value={mockRole}
-                    onChange={(e) => setMockRole(e.target.value as UserRole)}
-                    className="w-full h-11 px-3 rounded-[4px] text-sm transition-all duration-[330ms] focus:outline-none focus:ring-2 focus:ring-[#3E6AE1]/20 focus:border-[#3E6AE1]"
-                    style={{
-                      background: 'var(--color-white)',
-                      border: '1px solid var(--color-cloud)',
-                      color: 'var(--color-heading)',
-                    }}
-                  >
-                    <option value={UserRole.SUPER_ADMIN}>Super Admin (platform-wide)</option>
-                    <option value={UserRole.PRESIDENT}>President (full access)</option>
-                    <option value={UserRole.SECRETARY}>Secretary (members, comms)</option>
-                    <option value={UserRole.TREASURER}>Treasurer (finance)</option>
-                    <option value={UserRole.SUPERVISOR}>Supervisor (staff, IoT/gates)</option>
-                    <option value={UserRole.FLAT_OWNER}>Flat Owner (resident)</option>
-                    <option value={UserRole.TENANT}>Tenant (restricted resident)</option>
-                  </select>
-                </div>
+
               </>
             )}
 

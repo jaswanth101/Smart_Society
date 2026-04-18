@@ -7,6 +7,10 @@ import { ThrottlerModule } from '@nestjs/throttler'
 // Prisma (replaces TypeORM + Mongoose)
 import { PrismaModule } from './common/prisma/prisma.module'
 
+// Mailer (Global NodeMailer for SMTP)
+import { MailerModule } from '@nestjs-modules/mailer'
+import { ConfigService } from '@nestjs/config'
+
 // Feature Modules
 import { AuthModule }           from './modules/auth/auth.module'
 import { TenantsModule }        from './modules/tenants/tenants.module'
@@ -34,7 +38,7 @@ import appConfig      from './config/app.config'
 // ─────────────────────────────────────────────────────────
 // AppModule — Root module.
 // Uses Prisma for PostgreSQL. TypeORM & Mongoose removed.
-// BullMQ, WebSockets, Jobs deferred until Redis is configured.
+// Built-in automated SMTP dispatcher.
 // ─────────────────────────────────────────────────────────
 
 @Module({
@@ -44,6 +48,26 @@ import appConfig      from './config/app.config'
       isGlobal:   true,
       load:       [appConfig],
       envFilePath: '.env',
+    }),
+
+    // Global SMTP Mailer Engine
+    MailerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (config: ConfigService) => ({
+        transport: {
+          host: 'smtp.gmail.com',
+          port: 465,
+          secure: true,
+          auth: {
+            user: config.get<string>('EMAIL_USER'),
+            pass: config.get<string>('EMAIL_APP_PASSWORD'),
+          },
+        },
+        defaults: {
+          from: `"SmartSociety 360" <${config.get<string>('EMAIL_USER')}>`,
+        },
+      }),
     }),
 
     // Rate limiting

@@ -17,10 +17,11 @@ export class CreateUserDto {
   @IsNotEmpty()
   phone: string;
 
-  @ApiProperty({ example: 'password123' })
+  @ApiPropertyOptional({ example: 'password123' })
   @IsString()
   @MinLength(6)
-  password: string;
+  @IsOptional()
+  password?: string;
 
   @ApiProperty({ enum: UserRole, example: UserRole.FLAT_OWNER })
   @IsEnum(UserRole)
