@@ -19,7 +19,7 @@ export function Card({ title, subtitle, action, footer, children, className = ''
   return (
     <div className={`rounded-[12px] bg-white ${noPadding ? '' : 'p-6'} ${className}`}>
       {(title || action) && (
-        <div className="flex items-start justify-between gap-4 mb-4">
+        <div className={`flex items-start justify-between gap-4 ${noPadding ? 'p-6 pb-4' : 'mb-4'}`}>
           <div>
             {title && (
               typeof title === 'string'

@@ -67,6 +67,15 @@ export class UsersService {
       );
     }
 
+    // Update the unit's occupancy status to match the new resident
+    if (rest.unitId) {
+      const newOccupancy = rest.role === 'TENANT' ? 'RENTED' : 'OCCUPIED';
+      await this.prisma.unit.update({
+        where: { id: rest.unitId },
+        data: { occupancy: newOccupancy }
+      }).catch(err => console.error('Failed to update unit occupancy', err));
+    }
+
     return newUser;
   }
 

@@ -1,7 +1,7 @@
 import { type ReactNode, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Bell, User, Building, Home, CreditCard, MessageSquare, Menu, X, Users, Car, FileText, Dumbbell, QrCode } from 'lucide-react'
-import { useAuthStore } from '@/store/auth.store'
+import { useAuthStore } from '@/store/authStore'
 
 // ─────────────────────────────────────────────────────────
 // ResidentLayout — Tesla-inspired consumer-facing layout.
