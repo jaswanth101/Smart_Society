@@ -1,26 +1,55 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { Card } from '@/components/ui/Card'
 import { ShieldCheck, Lock } from 'lucide-react'
+import { apiClient } from '@/lib/api'
 
 // ─────────────────────────────────────────────────────────
 // ElectionsPage — Tesla-inspired Transition of Power
 // ─────────────────────────────────────────────────────────
 
-type Nominee = { id: string; name: string; role: string; votes: number }
-
-const MOCK_NOMINEES: Nominee[] = [
-  { id: 'n1', name: 'Alisha Verma', role: 'President candidate', votes: 142 },
-  { id: 'n2', name: 'Sanjay Kumar', role: 'President candidate', votes: 89 },
-  { id: 'n3', name: 'David D', role: 'Secretary candidate', votes: 201 },
-]
+type Candidate = { id: string; name: string; manifesto: string; role: string; voteCount: number }
+type ElectionLive = {
+  id: string; title: string; status: string;
+  candidates: Candidate[];
+  liveStats: { totalFlats: number; votesCast: number; quorumPercentage: number; isQuorumMet: boolean }
+}
 
 export default function ElectionsPage() {
-  const [stage] = useState<'SETUP' | 'LIVE' | 'RESOLVED'>('LIVE')
+  const { tenantId } = useParams<{ tenantId: string }>()
+  const [election, setElection] = useState<ElectionLive | null>(null)
   const [handoverConfirm, setHandoverConfirm] = useState(false)
+  const [loading, setLoading] = useState(true)
 
-  const handleHandover = () => {
-    alert("Root permissions transferred to Alisha Verma. You will now be downgraded to flat owner.")
+  const fetchLiveElection = async () => {
+    try {
+      const { data } = await apiClient.get('/elections/active')
+      setElection(data)
+    } catch (err) {
+      console.error('Failed to fetch active election', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Poll for live votes every 5 seconds
+  useEffect(() => {
+    if (!tenantId) return
+    fetchLiveElection()
+    const interval = setInterval(fetchLiveElection, 5000)
+    return () => clearInterval(interval)
+  }, [tenantId])
+
+  const handleHandover = async () => {
+    if (!election) return
+    try {
+      await apiClient.post(`/elections/${election.id}/resolve`)
+      alert("Election sealed and finalized. Manual Role reassignment is now required by Super Admin for safety.")
+      fetchLiveElection()
+    } catch (err) {
+      alert("Failed to resolve election")
+    }
   }
 
   return (
@@ -42,18 +71,24 @@ export default function ElectionsPage() {
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
               <div>
                 <span className="text-[11px] font-medium block mb-1" style={{ color: 'var(--color-placeholder)' }}>Live status</span>
-                <h2 className="text-[28px] font-medium text-white">Voting in progress</h2>
+                <h2 className="text-[28px] font-medium text-white">
+                  {election ? (election.status === 'VOTING_OPEN' ? 'Voting in progress' : 'Election Resolved') : 'No active election'}
+                </h2>
                 <div className="flex items-center gap-2 mt-2">
-                  <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                  <span className="text-sm font-medium text-white">Closes in 4h 12m</span>
+                  {election?.status === 'VOTING_OPEN' && <div className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+                  <span className="text-sm font-medium text-white">
+                    {election ? election.title : 'Standby for inauguration'}
+                  </span>
                 </div>
               </div>
               <div className="text-left md:text-right">
                 <span className="text-[11px] font-medium block mb-1" style={{ color: 'var(--color-placeholder)' }}>Quorum met</span>
                 <p className="text-5xl font-medium text-white">
-                  72<span className="text-2xl" style={{ color: 'var(--color-placeholder)' }}>%</span>
+                  {election?.liveStats.quorumPercentage || 0}<span className="text-2xl" style={{ color: 'var(--color-placeholder)' }}>%</span>
                 </p>
-                <p className="text-sm mt-1" style={{ color: 'var(--color-placeholder)' }}>340/472 flats voted</p>
+                <p className="text-sm mt-1" style={{ color: 'var(--color-placeholder)' }}>
+                  {election?.liveStats.votesCast || 0}/{election?.liveStats.totalFlats || 0} flats voted
+                </p>
               </div>
             </div>
           </div>
@@ -61,26 +96,30 @@ export default function ElectionsPage() {
           {/* Leaderboard */}
           <Card title="Live leaderboard">
             <div className="mt-2 space-y-0">
-              {MOCK_NOMINEES.map((nominee, i) => (
-                <div key={nominee.id} className="flex items-center justify-between py-4" style={{ borderBottom: '1px solid var(--color-cloud)' }}>
-                  <div className="flex items-center gap-4">
-                    <div
-                      className="w-10 h-10 rounded-[4px] flex items-center justify-center font-medium"
-                      style={{ border: '1px solid var(--color-cloud)', color: 'var(--color-heading)' }}
-                    >
-                      {i + 1}
+              {!election || election.candidates.length === 0 ? (
+                <p className="py-4 text-sm text-slate-500">No candidates polling data yet.</p>
+              ) : (
+                election.candidates.map((candidate, i) => (
+                  <div key={candidate.id} className="flex items-center justify-between py-4" style={{ borderBottom: '1px solid var(--color-cloud)' }}>
+                    <div className="flex items-center gap-4">
+                      <div
+                        className="w-10 h-10 rounded-[4px] flex items-center justify-center font-medium"
+                        style={{ border: '1px solid var(--color-cloud)', color: 'var(--color-heading)' }}
+                      >
+                        {i + 1}
+                      </div>
+                      <div>
+                        <p className="text-[17px] font-medium leading-none mb-1" style={{ color: 'var(--color-heading)' }}>{candidate.name}</p>
+                        <p className="text-sm" style={{ color: 'var(--color-tertiary)' }}>{candidate.manifesto || 'Candidate'}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-[17px] font-medium leading-none mb-1" style={{ color: 'var(--color-heading)' }}>{nominee.name}</p>
-                      <p className="text-sm" style={{ color: 'var(--color-tertiary)' }}>{nominee.role}</p>
+                    <div className="text-right">
+                      <span className="text-[17px] font-medium" style={{ color: 'var(--color-heading)' }}>{candidate.voteCount}</span>
+                      <span className="text-[11px] block mt-0.5" style={{ color: 'var(--color-placeholder)' }}>votes</span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-[17px] font-medium" style={{ color: 'var(--color-heading)' }}>{nominee.votes}</span>
-                    <span className="text-[11px] block mt-0.5" style={{ color: 'var(--color-placeholder)' }}>votes</span>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </Card>
         </div>
@@ -106,7 +145,7 @@ export default function ElectionsPage() {
               {!handoverConfirm ? (
                 <button
                   onClick={() => setHandoverConfirm(true)}
-                  disabled={stage !== 'LIVE'}
+                  disabled={!election || election.status !== 'VOTING_OPEN'}
                   className="w-full mt-auto py-3 rounded-[4px] font-medium text-sm transition-colors duration-[330ms] disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{ background: 'var(--color-white)', color: 'var(--color-heading)', border: '1px solid var(--color-cloud)' }}
                 >
@@ -117,7 +156,7 @@ export default function ElectionsPage() {
                   <p className="text-xs font-medium flex items-center justify-center gap-1" style={{ color: '#ef4444' }}>
                     <Lock size={12} /> Confirm action
                   </p>
-                  <p className="text-xs" style={{ color: 'var(--color-tertiary)' }}>This action demotes your account permanently.</p>
+                  <p className="text-xs" style={{ color: 'var(--color-tertiary)' }}>This action seals the election. Manual re-assignment required.</p>
                   <div className="flex items-center gap-2 mt-2">
                     <button
                       onClick={() => setHandoverConfirm(false)}

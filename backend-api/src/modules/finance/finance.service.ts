@@ -105,6 +105,23 @@ export class FinanceService {
     return { message: `Generated ${createdCount} invoices for ${month} ${year}.`, count: createdCount, month, year };
   }
 
+  async payInvoice(tenantId: string, id: string) {
+    const invoice = await this.prisma.invoice.findUnique({
+      where: { id }
+    });
+    if (!invoice || invoice.tenantId !== tenantId) {
+      throw new NotFoundException('Invoice not found in this society.');
+    }
+    
+    return this.prisma.invoice.update({
+      where: { id },
+      data: {
+        status: 'PAID',
+        paidAt: new Date(),
+      }
+    });
+  }
+
   // ── Expenses ────────────────────────────────────────────
 
   async createExpense(tenantId: string, dto: CreateExpenseDto) {

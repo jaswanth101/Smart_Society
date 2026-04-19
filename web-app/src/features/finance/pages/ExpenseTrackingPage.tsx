@@ -1,28 +1,48 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Plus, Upload, Receipt, Search } from 'lucide-react'
+import { apiClient } from '@/lib/api'
+import { AddExpenseModal } from '../components/AddExpenseModal'
 
 // ─────────────────────────────────────────────────────────
-// ExpenseTrackingPage — Tesla-inspired expense manager
+// ExpenseTrackingPage — Enterprise Live Expense Manager
 // ─────────────────────────────────────────────────────────
 
-type Expense = { id: string; title: string; category: string; amount: number; vendor: string; date: string; status: 'APPROVED' | 'PENDING' | 'REJECTED'; receipt: boolean }
-
-const MOCK_EXPENSES: Expense[] = [
-  { id: 'E-001', title: 'Lift AMC — Q1 2026', category: 'Maintenance', amount: 120000, vendor: 'Otis India', date: 'Apr 10', status: 'APPROVED', receipt: true },
-  { id: 'E-002', title: 'Garden landscaping', category: 'Landscaping', amount: 35000, vendor: 'GreenScape Co.', date: 'Apr 8', status: 'APPROVED', receipt: true },
-  { id: 'E-003', title: 'CCTV camera replacement x4', category: 'Security', amount: 48000, vendor: 'Hikvision Dealer', date: 'Apr 5', status: 'PENDING', receipt: false },
-  { id: 'E-004', title: 'Staff uniforms — batch 2', category: 'Staff', amount: 18500, vendor: 'UniformWorks', date: 'Apr 1', status: 'PENDING', receipt: true },
-  { id: 'E-005', title: 'Water tanker — emergency refill', category: 'Utilities', amount: 8000, vendor: 'AquaSupply', date: 'Mar 28', status: 'APPROVED', receipt: true },
-]
+type Expense = { 
+  id: string; title: string; category: string; amount: number; 
+  vendorName: string; createdAt: string; status: 'APPROVED' | 'PENDING' | 'REJECTED'; 
+  receiptUrl: string | null 
+}
 
 const STATUS_MAP: Record<string, 'success' | 'warning' | 'danger'> = { APPROVED: 'success', PENDING: 'warning', REJECTED: 'danger' }
 
 export default function ExpenseTrackingPage() {
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const filtered = MOCK_EXPENSES.filter(e => e.title.toLowerCase().includes(search.toLowerCase()) || e.category.toLowerCase().includes(search.toLowerCase()))
+  const [isAddOpen, setIsAddOpen] = useState(false)
+
+  const fetchExpenses = async () => {
+    try {
+      const { data } = await apiClient.get('/finance/expenses')
+      setExpenses(data)
+    } catch (err) {
+      console.error('Failed to load expenses', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchExpenses()
+  }, [])
+
+  const filtered = expenses.filter(e => 
+    e.title.toLowerCase().includes(search.toLowerCase()) || 
+    e.category.toLowerCase().includes(search.toLowerCase())
+  )
 
   return (
     <DashboardLayout>
@@ -31,7 +51,9 @@ export default function ExpenseTrackingPage() {
           <h1 className="text-[40px] font-medium leading-[1.2]" style={{ color: 'var(--color-heading)' }}>Expense tracking</h1>
           <p className="text-sm mt-2" style={{ color: 'var(--color-tertiary)' }}>Upload bills, categorize spending, and track approval status.</p>
         </div>
-        <button className="px-4 py-2.5 rounded-[4px] text-sm font-medium text-white flex items-center gap-1.5 shrink-0 self-start sm:self-auto" style={{ background: 'var(--color-electric-blue)' }}>
+        <button 
+          onClick={() => setIsAddOpen(true)}
+          className="px-4 py-2.5 rounded-[4px] text-sm font-medium text-white flex items-center gap-1.5 shrink-0 self-start sm:self-auto" style={{ background: 'var(--color-electric-blue)' }}>
           <Plus size={16} /> Log expense
         </button>
       </div>
@@ -55,27 +77,44 @@ export default function ExpenseTrackingPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(e => (
+              {loading ? (
+                <tr><td colSpan={8} className="py-8 text-center text-slate-500">Loading ledger...</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={8} className="py-8 text-center text-slate-500">No expenses recorded.</td></tr>
+              ) : filtered.map(e => (
                 <tr key={e.id} className="transition-colors duration-[330ms] hover:bg-[#F4F4F4] cursor-pointer" style={{ borderBottom: '1px solid var(--color-cloud)' }}>
-                  <td className="px-4 py-3 text-xs font-medium" style={{ color: 'var(--color-placeholder)' }}>{e.id}</td>
+                  <td className="px-4 py-3 text-xs font-medium" style={{ color: 'var(--color-placeholder)' }}>{e.id.substring(0, 8)}</td>
                   <td className="px-4 py-3 font-medium" style={{ color: 'var(--color-heading)' }}>{e.title}</td>
                   <td className="px-4 py-3"><Badge variant="neutral">{e.category}</Badge></td>
-                  <td className="px-4 py-3" style={{ color: 'var(--color-tertiary)' }}>{e.vendor}</td>
-                  <td className="px-4 py-3 font-medium" style={{ color: 'var(--color-heading)' }}>₹{e.amount.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-tertiary)' }}>{e.date}</td>
+                  <td className="px-4 py-3" style={{ color: 'var(--color-tertiary)' }}>{e.vendorName || '--'}</td>
+                  <td className="px-4 py-3 font-medium text-red-500">₹{e.amount.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-tertiary)' }}>{new Date(e.createdAt).toLocaleDateString()}</td>
                   <td className="px-4 py-3">
-                    {e.receipt
+                    {e.receiptUrl
                       ? <Receipt size={14} style={{ color: 'var(--color-success)' }} />
                       : <Upload size={14} style={{ color: 'var(--color-placeholder)' }} />
                     }
                   </td>
-                  <td className="px-4 py-3"><Badge variant={STATUS_MAP[e.status]}>{e.status.toLowerCase()}</Badge></td>
+                  <td className="px-4 py-3"><Badge variant={STATUS_MAP[e.status] || 'neutral'}>{e.status}</Badge></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </Card>
+
+      <AddExpenseModal 
+        isOpen={isAddOpen} 
+        onClose={() => setIsAddOpen(false)} 
+        onSuccess={() => {
+          setLoading(true);
+          // Manually call fetch using apiClient since we extracted fetchExpenses outside initially or just reload
+          apiClient.get('/finance/expenses').then(res => {
+             setExpenses(res.data)
+             setLoading(false)
+          })
+        }} 
+      />
     </DashboardLayout>
   )
 }

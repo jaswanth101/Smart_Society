@@ -72,6 +72,16 @@ export class FinanceController {
     return this.financeService.findAllInvoices(tenantId, targetUnit);
   }
 
+  @Post('invoices/:id/pay')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.TREASURER)
+  @ApiOperation({ summary: 'Mark an invoice logically as PAID' })
+  payInvoice(
+    @Param('id') id: string,
+    @CurrentUser('tenantId') tenantId: string
+  ) {
+    return this.financeService.payInvoice(tenantId, id);
+  }
+
   // ── Expenses ────────────────────────────────────────────
 
   @Post('expenses')

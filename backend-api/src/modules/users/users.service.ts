@@ -86,4 +86,62 @@ export class UsersService {
       },
     });
   }
+
+  // ── ONBOARDING & KYC PIPELINE ────────────────────────────────
+
+  async getPendingUsers(tenantId: string) {
+    return this.prisma.user.findMany({
+      where: { 
+        tenantId,
+        isActive: false // Quarantined users awaiting physical verification
+      },
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        role: true,
+        createdAt: true,
+        unit: {
+          select: { flatNumber: true, building: { select: { name: true } } }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  async approveUser(tenantId: string, id: string) {
+    // 1. Elevate the user
+    const user = await this.prisma.user.update({
+      where: { id, tenantId },
+      data: { isActive: true },
+      include: { tenant: true }
+    });
+
+    // 2. Provision their password via Welcome Email
+    const randomSuffix = Math.random().toString(36).slice(-4).toUpperCase();
+    const rawPassword = `${user.name.split(' ')[0]}-${randomSuffix}`;
+    const hashedPassword = await bcrypt.hash(rawPassword, 10);
+    
+    await this.prisma.user.update({
+      where: { id },
+      data: { password: hashedPassword }
+    });
+
+    this.notificationsService.sendWelcomeEmail(
+      user.email,
+      user.name,
+      user.tenant?.name || 'your Society',
+      rawPassword
+    );
+
+    return { message: 'User physically verified and provisioned.' };
+  }
+
+  async rejectUser(tenantId: string, id: string) {
+    // Hard delete to prevent database bloat from unverified actors
+    await this.prisma.user.delete({
+      where: { id, tenantId }
+    });
+    return { message: 'Fraudulent/Unverified profile permanently deleted.' };
+  }
 }

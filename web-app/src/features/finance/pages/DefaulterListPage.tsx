@@ -14,7 +14,6 @@ export default function DefaulterListPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
-  useEffect(() => {
     const fetchInvoices = async () => {
       try {
         const { data } = await apiClient.get('/finance/invoices')
@@ -27,8 +26,21 @@ export default function DefaulterListPage() {
         setLoading(false)
       }
     }
+
+  useEffect(() => {
     fetchInvoices()
   }, [])
+
+  const handlePayInvoice = async (id: string, flatNumber: string) => {
+    if (!window.confirm(`Mark invoice for Flat ${flatNumber} as PAID?`)) return;
+    try {
+      await apiClient.post(`/finance/invoices/${id}/pay`)
+      // Optimitistically remove from defaulter list
+      setInvoices(prev => prev.filter(inv => inv.id !== id))
+    } catch (err) {
+      alert("Failed to mark invoice as paid.")
+    }
+  }
 
   const filtered = invoices.filter((d: any) =>
     (d.unit?.flatNumber || '').toLowerCase().includes(search.toLowerCase())
@@ -106,6 +118,21 @@ export default function DefaulterListPage() {
               ) : filtered.map((d: any) => (
                 <tr key={d.id} className="transition-colors duration-[330ms] hover:bg-[#F4F4F4]" style={{ borderBottom: '1px solid var(--color-cloud)' }}>
                   <td className="px-4 py-3 font-medium" style={{ color: 'var(--color-heading)' }}>{d.unit?.flatNumber || 'Unknown Unit'}</td>
+                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-tertiary)' }}>{d.month} {d.year}</td>
+                  <td className="px-4 py-3 font-medium text-red-500">₹{d.amount.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-tertiary)' }}>{new Date(d.dueDate).toLocaleDateString()}</td>
+                  <td className="px-4 py-3"><Badge variant="danger">{d.status}</Badge></td>
+                  <td className="px-4 py-3">
+                    <button 
+                      onClick={() => handlePayInvoice(d.id, d.unit?.flatNumber)}
+                      className="px-3 py-1.5 rounded-[4px] text-[11px] font-medium text-white transition-colors duration-[330ms] uppercase tracking-wider" 
+                      style={{ background: 'var(--color-success)' }}
+                    >
+                      Mark Paid
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

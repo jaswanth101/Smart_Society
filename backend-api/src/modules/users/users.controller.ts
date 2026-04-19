@@ -28,8 +28,37 @@ export class UsersController {
 
   @Get()
   @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.SECRETARY)
-  @ApiOperation({ summary: 'Get all users in the current society' })
+  @ApiOperation({ summary: 'Get all active users in the current society' })
   findAll(@CurrentUser('tenantId') tenantId: string) {
     return this.usersService.findAllByTenant(tenantId);
+  }
+
+  // ── ONBOARDING & KYC PIPELINE ────────────────────────────────
+
+  @Get('pending')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.SECRETARY)
+  @ApiOperation({ summary: 'Get all quarantined/pending users awaiting physical verification' })
+  getPendingUsers(@CurrentUser('tenantId') tenantId: string) {
+    return this.usersService.getPendingUsers(tenantId);
+  }
+
+  @Patch(':id/approve')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.SECRETARY)
+  @ApiOperation({ summary: 'Physically verify and provision a pending member' })
+  approveUser(
+    @Param('id') id: string,
+    @CurrentUser('tenantId') tenantId: string
+  ) {
+    return this.usersService.approveUser(tenantId, id);
+  }
+
+  @Patch(':id/reject')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.SECRETARY)
+  @ApiOperation({ summary: 'Permanently purge an unverified fraudulent profile' })
+  rejectUser(
+    @Param('id') id: string,
+    @CurrentUser('tenantId') tenantId: string
+  ) {
+    return this.usersService.rejectUser(tenantId, id);
   }
 }
