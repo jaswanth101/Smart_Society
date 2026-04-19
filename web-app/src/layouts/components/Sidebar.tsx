@@ -48,35 +48,40 @@ const SOCIETY_ITEMS: NavItem[] = [
   { label: 'Settings',       icon: Settings,        path: (t) => `/${t}/admin/settings`,              roles: [UserRole.PRESIDENT, UserRole.SECRETARY] },
 ]
 
+// ── Global Cache to prevent Sidebar flashing during React Router remounts ──
+let globalFeaturesCache: Record<string, boolean> = {}
+
 export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, setMobileOpen: (v: boolean) => void }) {
   const [collapsed, setCollapsed] = useState(false)
   const { tenantId = '' } = useParams<{ tenantId: string }>()
   const user   = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
 
-  const [features, setFeatures] = useState<Record<string, boolean>>({})
+  const [features, setFeatures] = useState<Record<string, boolean>>(globalFeaturesCache)
 
-
+  const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN
 
   useEffect(() => {
     if (!isSuperAdmin && tenantId) {
       apiClient.get(`/tenants/${tenantId}`).then(res => {
-         setFeatures({
+         const fetchedFeatures = {
            hasAmenities: res.data.hasAmenities,
            hasElections: res.data.hasElections,
            hasHelpdesk: res.data.hasHelpdesk,
            hasVisitorGate: res.data.hasVisitorGate
-         })
+         }
+         globalFeaturesCache = fetchedFeatures
+         setFeatures(fetchedFeatures)
       }).catch(err => console.error('Sidebar feature fetch failed', err))
     }
   }, [tenantId, user, isSuperAdmin])
 
-  const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN
   const navPool = isSuperAdmin ? PLATFORM_ITEMS : SOCIETY_ITEMS
   const visibleItems = navPool.filter(
     (item) => {
        if (!user?.role || !item.roles.includes(user.role)) return false;
-       if (item.feature && features[item.feature] === false) return false;
+       // Strict check: Default to hiding features if state is missing
+       if (item.feature && features[item.feature] !== true) return false;
        return true;
     }
   )

@@ -2,7 +2,10 @@ import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Search, Plus, Building2, Users, Wifi, WifiOff } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { apiClient } from '@/lib/api'
+import { OnboardSocietyModal } from '../components/OnboardSocietyModal'
 
 // ─────────────────────────────────────────────────────────
 // PlatformSocietiesPage — Super Admin society list
@@ -18,8 +21,34 @@ const MOCK: Society[] = [
 ]
 
 export default function PlatformSocietiesPage() {
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
-  const filtered = MOCK.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || s.city.toLowerCase().includes(search.toLowerCase()))
+  const [societies, setSocieties] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showModal, setShowModal] = useState(false)
+  const [analytics, setAnalytics] = useState<any>({ mrr: 0, activeSocieties: 0, totalResidents: 0, edgeServersOnline: 0, edgeServersTotal: 0 })
+
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const [tenantsRes, statsRes] = await Promise.all([
+        apiClient.get('/tenants'),
+        apiClient.get('/tenants/analytics')
+      ])
+      setSocieties(tenantsRes.data)
+      setAnalytics(statsRes.data)
+    } catch (error) {
+      console.error('Failed to fetch societies', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const filtered = societies.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || s.city.toLowerCase().includes(search.toLowerCase()))
 
   return (
     <DashboardLayout>
@@ -28,13 +57,18 @@ export default function PlatformSocietiesPage() {
           <h1 className="text-[40px] font-medium leading-[1.2]" style={{ color: 'var(--color-heading)' }}>Societies</h1>
           <p className="text-sm mt-2" style={{ color: 'var(--color-tertiary)' }}>All onboarded societies across the platform.</p>
         </div>
-        <button className="px-4 py-2.5 rounded-[4px] text-sm font-medium text-white flex items-center gap-1.5 shrink-0 self-start sm:self-auto" style={{ background: 'var(--color-electric-blue)' }}>
+        <button onClick={() => setShowModal(true)} className="px-4 py-2.5 rounded-[4px] text-sm font-medium text-white flex items-center gap-1.5 shrink-0 self-start sm:self-auto" style={{ background: 'var(--color-electric-blue)' }}>
           <Plus size={16} /> Onboard society
         </button>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {[{ label: 'Total societies', value: '4' }, { label: 'Total units', value: '2,186' }, { label: 'Active users', value: '1,833' }, { label: 'Edge servers online', value: '3/4' }].map(s => (
+        {[
+          { label: 'Total societies', value: societies.length.toString() }, 
+          { label: 'Total residents', value: analytics.totalResidents.toLocaleString() }, 
+          { label: 'MRR', value: `₹${analytics.mrr.toLocaleString()}` }, 
+          { label: 'Edge servers', value: `${analytics.edgeServersOnline}/${analytics.edgeServersTotal}` }
+        ].map(s => (
           <div key={s.label} className="rounded-[12px] p-4 text-center" style={{ background: 'var(--color-white)' }}>
             <p className="text-2xl font-medium" style={{ color: 'var(--color-heading)' }}>{s.value}</p>
             <p className="text-xs mt-1" style={{ color: 'var(--color-tertiary)' }}>{s.label}</p>
@@ -58,25 +92,41 @@ export default function PlatformSocietiesPage() {
               ))}
             </tr></thead>
             <tbody>
-              {filtered.map(s => (
-                <tr key={s.id} className="transition-colors duration-[330ms] hover:bg-[#F4F4F4] cursor-pointer" style={{ borderBottom: '1px solid var(--color-cloud)' }}>
-                  <td className="px-4 py-3"><div className="flex items-center gap-2"><Building2 size={16} style={{ color: 'var(--color-electric-blue)' }} /><span className="font-medium" style={{ color: 'var(--color-heading)' }}>{s.name}</span></div></td>
-                  <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{s.city}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{s.units}</td>
-                  <td className="px-4 py-3" style={{ color: 'var(--color-heading)' }}>{s.activeUsers}</td>
-                  <td className="px-4 py-3"><Badge variant={s.plan === 'PREMIUM' ? 'info' : 'neutral'}>{s.plan.toLowerCase()}</Badge></td>
-                  <td className="px-4 py-3">
-                    <span className="flex items-center gap-1.5 text-xs font-medium" style={{ color: s.edgeStatus === 'ONLINE' ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                      {s.edgeStatus === 'ONLINE' ? <Wifi size={12} /> : <WifiOff size={12} />}{s.edgeStatus.toLowerCase()}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-placeholder)' }}>{s.createdAt}</td>
-                </tr>
-              ))}
+              {loading ? (
+                <tr><td colSpan={7} className="text-center py-8 text-sm text-slate-500">Loading societies...</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={7} className="text-center py-8 text-sm text-slate-500">No societies found.</td></tr>
+              ) : (
+                filtered.map(s => (
+                  <tr key={s.id} onClick={() => navigate(`/${s.slug}/admin/dashboard`)} className="transition-colors duration-[330ms] hover:bg-[#F4F4F4] cursor-pointer" style={{ borderBottom: '1px solid var(--color-cloud)' }}>
+                    <td className="px-4 py-3"><div className="flex items-center gap-2"><Building2 size={16} style={{ color: 'var(--color-electric-blue)' }} /><span className="font-medium" style={{ color: 'var(--color-heading)' }}>{s.name}</span></div></td>
+                    <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{s.city}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--color-body)' }}>{s.totalUnits}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--color-heading)' }}>-</td>
+                    <td className="px-4 py-3"><Badge variant={s.subscriptionTier === 'PREMIUM' ? 'info' : 'neutral'}>{s.subscriptionTier.toLowerCase()}</Badge></td>
+                    <td className="px-4 py-3">
+                      <span className="flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--color-success)' }}>
+                        <Wifi size={12} /> online
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs" style={{ color: 'var(--color-placeholder)' }}>{new Date(s.createdAt).toLocaleDateString()}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </Card>
+      
+      {showModal && (
+        <OnboardSocietyModal 
+          onClose={() => setShowModal(false)}
+          onSuccess={() => {
+            setShowModal(false)
+            fetchData() 
+          }}
+        />
+      )}
     </DashboardLayout>
   )
 }
