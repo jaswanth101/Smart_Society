@@ -42,4 +42,11 @@ export class TenantsController {
   findOne(@Param('id') id: string) {
     return this.tenantsService.findOne(id);
   }
+
+  @Post(':id/features') // Note: We use POST or PATCH for simplicity
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT)
+  @ApiOperation({ summary: 'Update feature toggles for a society' })
+  updateFeatures(@Param('id') id: string, @Body() body: any) {
+    return this.tenantsService.updateFeatures(id, body);
+  }
 }

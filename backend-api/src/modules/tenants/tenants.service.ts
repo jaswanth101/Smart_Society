@@ -140,4 +140,16 @@ export class TenantsService {
       edgeServersTotal: totalNodes,
     };
   }
+
+  async updateFeatures(id: string, features: {
+    hasAmenities?: boolean;
+    hasElections?: boolean;
+    hasHelpdesk?: boolean;
+    hasVisitorGate?: boolean;
+  }) {
+    return this.prisma.tenant.update({
+      where: { id },
+      data: features,
+    });
+  }
 }

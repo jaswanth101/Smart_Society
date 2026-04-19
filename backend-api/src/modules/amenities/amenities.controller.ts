@@ -32,4 +32,15 @@ export class AmenitiesController {
   findAll(@CurrentUser('tenantId') tenantId: string) {
     return this.amenitiesService.findAll(tenantId);
   }
+
+  @Post(':id/status') // Note: We use POST for simplicity of patching via standard JSON
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.SECRETARY)
+  @ApiOperation({ summary: 'Update status of an amenity (e.g. Block due to maintenance)' })
+  updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: string,
+    @CurrentUser('tenantId') tenantId: string,
+  ) {
+    return this.amenitiesService.updateStatus(tenantId, id, status);
+  }
 }

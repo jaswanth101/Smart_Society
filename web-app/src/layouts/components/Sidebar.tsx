@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { UserRole } from '@/types'
+import { apiClient } from '@/lib/api'
 
 // ─────────────────────────────────────────────────────────
 // Sidebar — Tesla-inspired Carbon Dark sidebar
@@ -17,6 +18,7 @@ interface NavItem {
   icon:     React.ElementType
   path:     (t: string) => string
   roles:    UserRole[]
+  feature?: 'hasAmenities' | 'hasElections' | 'hasHelpdesk' | 'hasVisitorGate'
 }
 
 // ── Platform-level nav (Super Admin) ─────────────────────
@@ -34,12 +36,13 @@ const SOCIETY_ITEMS: NavItem[] = [
   { label: 'Property',       icon: Building2,       path: (t) => `/${t}/admin/property/units`,        roles: [UserRole.PRESIDENT, UserRole.SECRETARY] },
   { label: 'Finance',        icon: Wallet,          path: (t) => `/${t}/admin/finance/overview`,      roles: [UserRole.PRESIDENT, UserRole.TREASURER] },
   { label: 'Access control', icon: ShieldCheck,     path: (t) => `/${t}/admin/access/rfid`,           roles: [UserRole.PRESIDENT, UserRole.SECRETARY, UserRole.SUPERVISOR] },
+  { label: 'Amenities',      icon: ShieldCheck,     path: (t) => `/${t}/admin/access/amenities`,      roles: [UserRole.PRESIDENT, UserRole.SECRETARY, UserRole.SUPERVISOR], feature: 'hasAmenities' },
   { label: 'Staff & vendors', icon: UserCog,        path: (t) => `/${t}/admin/staff/directory`,       roles: [UserRole.PRESIDENT, UserRole.SUPERVISOR] },
   { label: 'Communications', icon: MessageSquare,   path: (t) => `/${t}/admin/communications/notices`, roles: [UserRole.PRESIDENT, UserRole.SECRETARY] },
-  { label: 'Helpdesk',       icon: Package,         path: (t) => `/${t}/admin/helpdesk/complaints`,   roles: [UserRole.PRESIDENT, UserRole.SECRETARY, UserRole.SUPERVISOR] },
-  { label: 'IoT & hardware', icon: Cpu,             path: (t) => `/${t}/admin/access/gates`,          roles: [UserRole.PRESIDENT, UserRole.SUPERVISOR] },
+  { label: 'Helpdesk',       icon: Package,         path: (t) => `/${t}/admin/helpdesk/complaints`,   roles: [UserRole.PRESIDENT, UserRole.SECRETARY, UserRole.SUPERVISOR], feature: 'hasHelpdesk' },
+  { label: 'IoT & hardware', icon: Cpu,             path: (t) => `/${t}/admin/access/gates`,          roles: [UserRole.PRESIDENT, UserRole.SUPERVISOR], feature: 'hasVisitorGate' },
   { label: 'Analytics',      icon: BarChart3,       path: (t) => `/${t}/admin/finance/reports`,       roles: [UserRole.PRESIDENT, UserRole.TREASURER] },
-  { label: 'Elections',      icon: Vote,            path: (t) => `/${t}/admin/elections`,             roles: [UserRole.PRESIDENT, UserRole.SECRETARY] },
+  { label: 'Elections',      icon: Vote,            path: (t) => `/${t}/admin/elections`,             roles: [UserRole.PRESIDENT, UserRole.SECRETARY], feature: 'hasElections' },
   { label: 'Notifications',  icon: Bell,            path: (t) => `/${t}/admin/communications/broadcast`, roles: [UserRole.PRESIDENT, UserRole.SECRETARY] },
   { label: 'Settings',       icon: Settings,        path: (t) => `/${t}/admin/settings`,              roles: [UserRole.PRESIDENT, UserRole.SECRETARY] },
 ]
@@ -50,10 +53,31 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
   const user   = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
 
+  const [features, setFeatures] = useState<Record<string, boolean>>({})
+
+  import('react').then(React => {
+    React.useEffect(() => {
+      if (!isSuperAdmin && tenantId) {
+        apiClient.get(`/tenants/${tenantId}`).then(res => {
+           setFeatures({
+             hasAmenities: res.data.hasAmenities,
+             hasElections: res.data.hasElections,
+             hasHelpdesk: res.data.hasHelpdesk,
+             hasVisitorGate: res.data.hasVisitorGate
+           })
+        }).catch(err => console.error('Sidebar feature fetch failed', err))
+      }
+    }, [tenantId, user])
+  })
+
   const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN
   const navPool = isSuperAdmin ? PLATFORM_ITEMS : SOCIETY_ITEMS
   const visibleItems = navPool.filter(
-    (item) => user?.role && item.roles.includes(user.role)
+    (item) => {
+       if (!user?.role || !item.roles.includes(user.role)) return false;
+       if (item.feature && features[item.feature] === false) return false;
+       return true;
+    }
   )
 
   return (

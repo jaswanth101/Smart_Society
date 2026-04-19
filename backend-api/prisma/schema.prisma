@@ -169,6 +169,13 @@ model Tenant {
   subscriptionTier String  @default("STANDARD")
   subscriptionPrice Float  @default(0)
   isActive        Boolean  @default(true)
+  
+  // Feature Toggles
+  hasAmenities    Boolean  @default(false)
+  hasElections    Boolean  @default(false)
+  hasHelpdesk     Boolean  @default(true)
+  hasVisitorGate  Boolean  @default(true)
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

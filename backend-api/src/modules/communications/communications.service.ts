@@ -9,6 +9,14 @@ export class CommunicationsService {
   // ── Notices (Digital Bulletin Board) ─────────────────────
 
   async createNotice(tenantId: string, authorId: string, dto: CreateNoticeDto) {
+    // Fetch the actual author name
+    const author = await this.prisma.user.findUnique({
+      where: { id: authorId },
+      select: { name: true }
+    });
+    
+    const authorName = author?.name || 'System Admin';
+
     // Map DTO 'content' to Prisma 'body'
     const { content, ...restProps } = dto as any;
     
@@ -17,7 +25,7 @@ export class CommunicationsService {
         ...restProps,
         body: content,
         tenantId,
-        authorName: authorId 
+        authorName
       }
     });
   }

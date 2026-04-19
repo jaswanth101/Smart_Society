@@ -18,4 +18,11 @@ export class AmenitiesService {
       orderBy: { name: 'asc' },
     });
   }
+
+  async updateStatus(tenantId: string, id: string, status: any) {
+    return this.prisma.amenity.update({
+      where: { id, tenantId },
+      data: { status },
+    });
+  }
 }
