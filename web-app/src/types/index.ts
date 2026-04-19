@@ -23,6 +23,7 @@ export interface AuthUser {
   phone: string
   role: UserRole
   tenantId: string | null   // null for SuperAdmin
+  unitId?: string | null
   avatarUrl?: string
 }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, useParams } from 'react-router-dom'
 import {
   LayoutDashboard, Users, Building2, Wallet, ShieldCheck,
@@ -37,6 +37,7 @@ const SOCIETY_ITEMS: NavItem[] = [
   { label: 'Finance',        icon: Wallet,          path: (t) => `/${t}/admin/finance/overview`,      roles: [UserRole.PRESIDENT, UserRole.TREASURER] },
   { label: 'Access control', icon: ShieldCheck,     path: (t) => `/${t}/admin/access/rfid`,           roles: [UserRole.PRESIDENT, UserRole.SECRETARY, UserRole.SUPERVISOR] },
   { label: 'Amenities',      icon: ShieldCheck,     path: (t) => `/${t}/admin/access/amenities`,      roles: [UserRole.PRESIDENT, UserRole.SECRETARY, UserRole.SUPERVISOR], feature: 'hasAmenities' },
+  { label: 'Visitor gate',   icon: Users,           path: (t) => `/${t}/admin/access/visitors`,       roles: [UserRole.PRESIDENT, UserRole.SECRETARY, UserRole.SUPERVISOR, UserRole.SECURITY_GUARD], feature: 'hasVisitorGate' },
   { label: 'Staff & vendors', icon: UserCog,        path: (t) => `/${t}/admin/staff/directory`,       roles: [UserRole.PRESIDENT, UserRole.SUPERVISOR] },
   { label: 'Communications', icon: MessageSquare,   path: (t) => `/${t}/admin/communications/notices`, roles: [UserRole.PRESIDENT, UserRole.SECRETARY] },
   { label: 'Helpdesk',       icon: Package,         path: (t) => `/${t}/admin/helpdesk/complaints`,   roles: [UserRole.PRESIDENT, UserRole.SECRETARY, UserRole.SUPERVISOR], feature: 'hasHelpdesk' },
@@ -55,20 +56,20 @@ export function Sidebar({ mobileOpen, setMobileOpen }: { mobileOpen: boolean, se
 
   const [features, setFeatures] = useState<Record<string, boolean>>({})
 
-  import('react').then(React => {
-    React.useEffect(() => {
-      if (!isSuperAdmin && tenantId) {
-        apiClient.get(`/tenants/${tenantId}`).then(res => {
-           setFeatures({
-             hasAmenities: res.data.hasAmenities,
-             hasElections: res.data.hasElections,
-             hasHelpdesk: res.data.hasHelpdesk,
-             hasVisitorGate: res.data.hasVisitorGate
-           })
-        }).catch(err => console.error('Sidebar feature fetch failed', err))
-      }
-    }, [tenantId, user])
-  })
+
+
+  useEffect(() => {
+    if (!isSuperAdmin && tenantId) {
+      apiClient.get(`/tenants/${tenantId}`).then(res => {
+         setFeatures({
+           hasAmenities: res.data.hasAmenities,
+           hasElections: res.data.hasElections,
+           hasHelpdesk: res.data.hasHelpdesk,
+           hasVisitorGate: res.data.hasVisitorGate
+         })
+      }).catch(err => console.error('Sidebar feature fetch failed', err))
+    }
+  }, [tenantId, user, isSuperAdmin])
 
   const isSuperAdmin = user?.role === UserRole.SUPER_ADMIN
   const navPool = isSuperAdmin ? PLATFORM_ITEMS : SOCIETY_ITEMS

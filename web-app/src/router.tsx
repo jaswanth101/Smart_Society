@@ -32,6 +32,7 @@ const ExpenseTrackingPage  = lazy(() => import('@/features/finance/pages/Expense
 const FinanceReportsPage   = lazy(() => import('@/features/finance/pages/FinanceReportsPage'))
 const RfidManagementPage   = lazy(() => import('@/features/access-control/pages/RfidManagementPage'))
 const AmenityConfigPage    = lazy(() => import('@/features/access-control/pages/AmenityConfigPage'))
+const VisitorManagementPage= lazy(() => import('@/features/access-control/pages/VisitorManagementPage'))
 const HardwareGatesPage    = lazy(() => import('@/features/iot/pages/HardwareGatesPage'))
 const StaffDirectoryPage   = lazy(() => import('@/features/staff/pages/StaffDirectoryPage'))
 const DutyRosterPage       = lazy(() => import('@/features/staff/pages/DutyRosterPage'))
@@ -126,6 +127,7 @@ export const router = createBrowserRouter([
           // Access Control
           { path: 'access/rfid',      element: <RoleGuard allowedRoles={[UserRole.PRESIDENT, UserRole.SECRETARY, UserRole.SUPERVISOR]}><S><RfidManagementPage /></S></RoleGuard> },
           { path: 'access/amenities', element: <RoleGuard allowedRoles={[UserRole.PRESIDENT, UserRole.SECRETARY, UserRole.SUPERVISOR]}><S><AmenityConfigPage /></S></RoleGuard> },
+          { path: 'access/visitors',  element: <RoleGuard allowedRoles={[UserRole.PRESIDENT, UserRole.SECRETARY, UserRole.SUPERVISOR, UserRole.SECURITY_GUARD]}><S><VisitorManagementPage /></S></RoleGuard> },
           { path: 'access/gates',     element: <RoleGuard allowedRoles={[UserRole.PRESIDENT, UserRole.SUPERVISOR]}><S><HardwareGatesPage /></S></RoleGuard> },
 
           // Staff & Vendors

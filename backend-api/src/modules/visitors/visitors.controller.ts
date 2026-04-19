@@ -52,4 +52,15 @@ export class VisitorsController {
     const targetUnit = isAdmin ? filterUnitId : currentUnitId;
     return this.visitorsService.findAll(tenantId, targetUnit);
   }
+
+  @Patch(':id/checkout')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.SECURITY_GUARD)
+  @ApiOperation({ summary: 'Mark a visitor as checked-out (departed)' })
+  @ApiParam({ name: 'id', description: 'Visitor ID' })
+  checkOut(
+    @Param('id') id: string,
+    @CurrentUser('tenantId') tenantId: string,
+  ) {
+    return this.visitorsService.checkOut(tenantId, id);
+  }
 }

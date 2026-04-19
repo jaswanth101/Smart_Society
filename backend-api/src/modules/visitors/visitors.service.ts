@@ -58,4 +58,22 @@ export class VisitorsService {
       orderBy: { scheduledAt: 'desc' }
     });
   }
+
+  async checkOut(tenantId: string, visitorId: string) {
+    const visitor = await this.prisma.visitor.findUnique({
+      where: { id: visitorId }
+    });
+
+    if (!visitor || visitor.tenantId !== tenantId) {
+      throw new NotFoundException('Visitor not found.');
+    }
+
+    return this.prisma.visitor.update({
+      where: { id: visitorId },
+      data: {
+        status: VisitStatus.COMPLETED,
+        checkoutAt: new Date()
+      }
+    });
+  }
 }
