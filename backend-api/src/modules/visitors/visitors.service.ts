@@ -76,4 +76,29 @@ export class VisitorsService {
       }
     });
   }
+
+  // ── 2.9 Visitor Blacklist ──────────────────────────────
+  // Permanently reject/blacklist a visitor. Guards can check this list.
+  async rejectVisitor(tenantId: string, visitorId: string) {
+    const visitor = await this.prisma.visitor.findUnique({
+      where: { id: visitorId }
+    });
+
+    if (!visitor || visitor.tenantId !== tenantId) {
+      throw new NotFoundException('Visitor not found.');
+    }
+
+    return this.prisma.visitor.update({
+      where: { id: visitorId },
+      data: { status: VisitStatus.REJECTED }
+    });
+  }
+
+  // Get all blacklisted (rejected) visitors for guard reference
+  async getBlacklist(tenantId: string) {
+    return this.prisma.visitor.findMany({
+      where: { tenantId, status: VisitStatus.REJECTED },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
 }

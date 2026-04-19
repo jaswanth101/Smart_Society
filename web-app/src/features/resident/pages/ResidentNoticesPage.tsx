@@ -1,20 +1,24 @@
+import { useState, useEffect } from 'react'
 import { ResidentLayout } from '@/layouts/ResidentLayout'
 import { Card } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
-import { FileText, Pin, Clock } from 'lucide-react'
+import { Pin, Clock, FileText } from 'lucide-react'
+import { apiClient } from '@/lib/api'
 
 // ─────────────────────────────────────────────────────────
-// ResidentNoticesPage — Society notice board
+// ResidentNoticesPage — Live notices from PostgreSQL
 // ─────────────────────────────────────────────────────────
-
-const MOCK = [
-  { id: 'n1', title: 'AGM meeting — April 30, 2026', body: 'All flat owners are requested to attend. Quorum requires 50%.', author: 'President', pinned: true, time: '2 hours ago' },
-  { id: 'n2', title: 'Scheduled power cut — Tower B', body: 'Bescom maintenance from 2 PM to 5 PM tomorrow.', author: 'Secretary', pinned: false, time: '1 day ago' },
-  { id: 'n3', title: 'Swimming pool closed for cleaning', body: 'Pool closed April 20–22 for deep cleaning.', author: 'Supervisor', pinned: false, time: '3 days ago' },
-  { id: 'n4', title: 'New RFID cards available', body: 'Collect replacement cards from management office 10 AM–1 PM.', author: 'Secretary', pinned: false, time: '1 week ago' },
-]
 
 export default function ResidentNoticesPage() {
+  const [notices, setNotices] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    apiClient.get('/communications/notices')
+      .then(res => setNotices(res.data))
+      .catch(err => console.error('Failed to load notices', err))
+      .finally(() => setLoading(false))
+  }, [])
+
   return (
     <ResidentLayout>
       <div className="mb-8">
@@ -22,19 +26,28 @@ export default function ResidentNoticesPage() {
         <p className="text-sm mt-2" style={{ color: 'var(--color-tertiary)' }}>Society circulars, documents, and announcements.</p>
       </div>
 
-      <div className="space-y-4">
-        {MOCK.map(n => (
-          <Card key={n.id} className="hover:bg-[#F4F4F4] transition-colors duration-[330ms] cursor-pointer">
-            <div className="flex items-start gap-3 mb-2">
-              {n.pinned && <Pin size={14} style={{ color: 'var(--color-electric-blue)' }} />}
-              <span className="text-[11px] flex items-center gap-1" style={{ color: 'var(--color-placeholder)' }}><Clock size={10} />{n.time}</span>
-            </div>
-            <h3 className="text-[17px] font-medium mb-1" style={{ color: 'var(--color-heading)' }}>{n.title}</h3>
-            <p className="text-sm mb-2 line-clamp-2" style={{ color: 'var(--color-tertiary)' }}>{n.body}</p>
-            <p className="text-xs" style={{ color: 'var(--color-placeholder)' }}>By {n.author}</p>
-          </Card>
-        ))}
-      </div>
+      {loading ? (
+        <div className="space-y-4">{Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 bg-gray-200 rounded-[8px] animate-pulse" />)}</div>
+      ) : notices.length === 0 ? (
+        <div className="py-16 text-center">
+          <FileText size={32} className="mx-auto mb-3 opacity-30" />
+          <p className="text-sm" style={{ color: 'var(--color-placeholder)' }}>No notices posted yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {notices.map((n: any) => (
+            <Card key={n.id} className="hover:bg-[#F4F4F4] transition-colors duration-[330ms] cursor-pointer">
+              <div className="flex items-start gap-3 mb-2">
+                {n.isPinned && <Pin size={14} style={{ color: 'var(--color-electric-blue)' }} />}
+                <span className="text-[11px] flex items-center gap-1" style={{ color: 'var(--color-placeholder)' }}><Clock size={10} />{new Date(n.createdAt).toLocaleDateString()}</span>
+              </div>
+              <h3 className="text-[17px] font-medium mb-1" style={{ color: 'var(--color-heading)' }}>{n.title}</h3>
+              <p className="text-sm mb-2 line-clamp-2" style={{ color: 'var(--color-tertiary)' }}>{n.body}</p>
+              <p className="text-xs" style={{ color: 'var(--color-placeholder)' }}>By {n.authorName || n.category || 'Admin'}</p>
+            </Card>
+          ))}
+        </div>
+      )}
     </ResidentLayout>
   )
 }

@@ -63,4 +63,24 @@ export class VisitorsController {
   ) {
     return this.visitorsService.checkOut(tenantId, id);
   }
+
+  // ━━━ 2.9 Visitor Blacklist ━━━
+
+  @Patch(':id/reject')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.SECURITY_GUARD)
+  @ApiOperation({ summary: 'Blacklist/reject a visitor permanently' })
+  @ApiParam({ name: 'id', description: 'Visitor ID' })
+  rejectVisitor(
+    @Param('id') id: string,
+    @CurrentUser('tenantId') tenantId: string,
+  ) {
+    return this.visitorsService.rejectVisitor(tenantId, id);
+  }
+
+  @Get('blacklist')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.SECURITY_GUARD)
+  @ApiOperation({ summary: 'List all blacklisted (rejected) visitors' })
+  getBlacklist(@CurrentUser('tenantId') tenantId: string) {
+    return this.visitorsService.getBlacklist(tenantId);
+  }
 }

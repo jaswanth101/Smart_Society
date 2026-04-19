@@ -144,4 +144,137 @@ export class UsersService {
     });
     return { message: 'Fraudulent/Unverified profile permanently deleted.' };
   }
+
+  // ━━━━━━━━━━━━━ TIER 2: Member Lifecycle ━━━━━━━━━━━━━
+
+  // ── 2.13 Move-Out / Offboarding Flow ────────────────────
+  // Calculate final dues → revoke RFID → mark unit VACANT → generate NOC
+  async moveOutUser(tenantId: string, userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { unit: true }
+    });
+
+    if (!user || user.tenantId !== tenantId) {
+      throw new ConflictException('User not found in this society.');
+    }
+
+    // 1. Calculate pending dues
+    const pendingInvoices = await this.prisma.invoice.findMany({
+      where: {
+        tenantId,
+        unitId: user.unitId || undefined,
+        status: { in: ['PENDING', 'OVERDUE'] }
+      }
+    });
+
+    const totalDues = pendingInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+
+    // 2. Revoke all RFID cards linked to this user/unit
+    if (user.unitId) {
+      await this.prisma.rfidCard.updateMany({
+        where: { tenantId, holderName: user.name, status: 'ACTIVE' },
+        data: { status: 'BLOCKED' }
+      });
+    }
+
+    // 3. Deactivate user account
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { isActive: false, unitId: null }
+    });
+
+    // 4. Mark the unit as VACANT if no other active residents remain
+    if (user.unitId) {
+      const remainingResidents = await this.prisma.user.count({
+        where: { unitId: user.unitId, isActive: true, id: { not: userId } }
+      });
+
+      if (remainingResidents === 0) {
+        await this.prisma.unit.update({
+          where: { id: user.unitId },
+          data: { occupancy: 'VACANT' }
+        });
+      }
+    }
+
+    // 5. Generate NOC summary
+    const noc = {
+      type: 'NO_OBJECTION_CERTIFICATE',
+      residentName: user.name,
+      flatNumber: user.unit?.flatNumber || 'N/A',
+      moveOutDate: new Date().toISOString(),
+      pendingDues: totalDues,
+      duesCleared: totalDues === 0,
+      rfidRevoked: true,
+      status: totalDues > 0 ? 'PENDING_CLEARANCE' : 'APPROVED'
+    };
+
+    return {
+      message: totalDues > 0
+        ? `Move-out initiated. ₹${totalDues} dues pending clearance before NOC can be issued.`
+        : `Move-out complete. NOC issued. ${user.name} has been offboarded.`,
+      noc,
+      pendingInvoiceCount: pendingInvoices.length,
+      totalDues
+    };
+  }
+
+  // ── 2.14 Owner → Tenant Rights Transfer ─────────────────
+  // When an owner rents their flat, suspend owner's amenity/gate access
+  // and transfer primary rights to the incoming tenant.
+  async transferToTenant(tenantId: string, ownerId: string, tenantUserId: string) {
+    const owner = await this.prisma.user.findUnique({ where: { id: ownerId } });
+    const tenant = await this.prisma.user.findUnique({ where: { id: tenantUserId } });
+
+    if (!owner || owner.tenantId !== tenantId) {
+      throw new ConflictException('Owner not found in this society.');
+    }
+    if (!tenant || tenant.tenantId !== tenantId) {
+      throw new ConflictException('Tenant not found in this society.');
+    }
+    if (owner.role !== 'FLAT_OWNER') {
+      throw new ConflictException('Source user is not a FLAT_OWNER.');
+    }
+    if (tenant.role !== 'TENANT') {
+      throw new ConflictException('Target user must have TENANT role.');
+    }
+
+    const unitId = owner.unitId;
+    if (!unitId) {
+      throw new ConflictException('Owner has no unit assigned.');
+    }
+
+    // 1. Assign the tenant to the same unit
+    await this.prisma.user.update({
+      where: { id: tenantUserId },
+      data: { unitId }
+    });
+
+    // 2. Suspend owner's RFID cards (they no longer live here)
+    await this.prisma.rfidCard.updateMany({
+      where: { tenantId, holderName: owner.name, status: 'ACTIVE' },
+      data: { status: 'BLOCKED' }
+    });
+
+    // 3. Remove owner from the unit (they still exist as FLAT_OWNER but without unit access)
+    await this.prisma.user.update({
+      where: { id: ownerId },
+      data: { unitId: null }
+    });
+
+    // 4. Mark unit as RENTED
+    await this.prisma.unit.update({
+      where: { id: unitId },
+      data: { occupancy: 'RENTED' }
+    });
+
+    return {
+      message: `Flat transferred. ${tenant.name} now has primary access. ${owner.name}'s RFID suspended.`,
+      unitId,
+      newOccupant: tenant.name,
+      previousOccupant: owner.name,
+      unitStatus: 'RENTED'
+    };
+  }
 }

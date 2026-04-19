@@ -65,20 +65,63 @@ export class ElectionsService {
     });
   }
 
-  // 3. Initiate Handover (Seal the Election)
+  // 3. Initiate Handover (Seal the Election) — 2.10 Role Handover
   async resolveElection(tenantId: string, id: string) {
     const election = await this.prisma.election.findFirst({
-      where: { id, tenantId }
+      where: { id, tenantId },
+      include: {
+        candidates: { orderBy: { voteCount: 'desc' } }
+      }
     });
 
     if (!election) throw new NotFoundException('Election not found');
 
-    return this.prisma.election.update({
+    // Seal the election
+    await this.prisma.election.update({
       where: { id },
       data: { 
         status: ElectionStatus.COMPLETED,
         endDate: new Date()
       }
     });
+
+    // ── AUTO ROLE HANDOVER ────────────────────────────────
+    // 1. Find the winner (candidate with most votes)
+    const winner = election.candidates[0];
+    if (!winner) {
+      return { message: 'Election sealed. No candidates to handover.' };
+    }
+
+    // 2. Demote the current President to FLAT_OWNER
+    const currentPresident = await this.prisma.user.findFirst({
+      where: { tenantId, role: 'PRESIDENT' }
+    });
+
+    if (currentPresident) {
+      await this.prisma.user.update({
+        where: { id: currentPresident.id },
+        data: { role: 'FLAT_OWNER' }
+      });
+    }
+
+    // 3. Promote the winner to PRESIDENT
+    // Find the user by matching candidate name to a user in the tenant
+    const winnerUser = await this.prisma.user.findFirst({
+      where: { tenantId, name: winner.name }
+    });
+
+    if (winnerUser) {
+      await this.prisma.user.update({
+        where: { id: winnerUser.id },
+        data: { role: 'PRESIDENT' }
+      });
+    }
+
+    return {
+      message: `Election resolved. ${winner.name} is the new President.`,
+      winner: winner.name,
+      previousPresident: currentPresident?.name || 'N/A',
+      voteCount: winner.voteCount
+    };
   }
 }

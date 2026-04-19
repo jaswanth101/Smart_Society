@@ -47,4 +47,16 @@ export class ComplaintsController {
   ) {
     return this.complaintsService.findAll(tenantId, userId, role);
   }
+
+  // ━━━ 2.12 Staff Rating after ticket resolution ━━━
+
+  @Post(':id/rate')
+  @ApiOperation({ summary: 'Rate staff performance after ticket resolution (1-5)' })
+  rateStaff(
+    @Param('id') id: string,
+    @Body('rating') rating: number,
+    @CurrentUser('tenantId') tenantId: string,
+  ) {
+    return this.complaintsService.rateStaff(tenantId, id, rating);
+  }
 }

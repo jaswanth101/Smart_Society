@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, UseGuards, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 
@@ -99,5 +99,62 @@ export class FinanceController {
   @ApiOperation({ summary: 'List all recorded expenses' })
   findAllExpenses(@CurrentUser('tenantId') tenantId: string) {
     return this.financeService.findAllExpenses(tenantId);
+  }
+
+  // ━━━━━━━━━━━━━ TIER 2: Business Logic Endpoints ━━━━━━━━━━━━━
+
+  @Patch('expenses/:id/approve')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT)
+  @ApiOperation({ summary: '2.1 Maker-Checker: President approves a pending expense' })
+  approveExpense(
+    @Param('id') id: string,
+    @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('role') role: string,
+  ) {
+    return this.financeService.approveExpense(tenantId, id, role);
+  }
+
+  @Patch('expenses/:id/reject')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT)
+  @ApiOperation({ summary: '2.1 Maker-Checker: President rejects a pending expense' })
+  rejectExpense(
+    @Param('id') id: string,
+    @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('role') role: string,
+  ) {
+    return this.financeService.rejectExpense(tenantId, id, role);
+  }
+
+  @Patch('invoices/:id/waive')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT)
+  @ApiOperation({ summary: '2.2 Fee Waiver: President waives an invoice for hardship' })
+  waiveInvoice(
+    @Param('id') id: string,
+    @CurrentUser('tenantId') tenantId: string,
+    @CurrentUser('role') role: string,
+  ) {
+    return this.financeService.waiveInvoice(tenantId, id, role);
+  }
+
+  @Get('defaulters')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.TREASURER, UserRole.SECRETARY)
+  @ApiOperation({ summary: '2.3 Defaulter list: Units with dues overdue beyond threshold' })
+  @ApiQuery({ name: 'days', required: false, type: Number })
+  getDefaulters(
+    @CurrentUser('tenantId') tenantId: string,
+    @Query('days') days?: string,
+  ) {
+    return this.financeService.getDefaulters(tenantId, days ? parseInt(days) : 90);
+  }
+
+  @Get('reports/summary')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.TREASURER)
+  @ApiOperation({ summary: '2.6 Financial report: P&L, collection rate, expense breakdown' })
+  @ApiQuery({ name: 'year', required: false, type: Number })
+  getFinancialSummary(
+    @CurrentUser('tenantId') tenantId: string,
+    @Query('year') year?: string,
+  ) {
+    return this.financeService.getFinancialSummary(tenantId, year ? parseInt(year) : undefined);
   }
 }

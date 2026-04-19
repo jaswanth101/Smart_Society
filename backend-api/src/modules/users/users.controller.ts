@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 
@@ -60,5 +60,30 @@ export class UsersController {
     @CurrentUser('tenantId') tenantId: string
   ) {
     return this.usersService.rejectUser(tenantId, id);
+  }
+
+  // ━━━ 2.13 Move-Out / Offboarding ━━━
+
+  @Post(':id/move-out')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.SECRETARY)
+  @ApiOperation({ summary: 'Offboard a member: calculate dues, revoke RFID, generate NOC' })
+  moveOutUser(
+    @Param('id') id: string,
+    @CurrentUser('tenantId') tenantId: string
+  ) {
+    return this.usersService.moveOutUser(tenantId, id);
+  }
+
+  // ━━━ 2.14 Owner → Tenant Transfer ━━━
+
+  @Post('transfer')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.SECRETARY)
+  @ApiOperation({ summary: 'Transfer flat rights from owner to tenant (renting out)' })
+  transferToTenant(
+    @Body('ownerId') ownerId: string,
+    @Body('tenantUserId') tenantUserId: string,
+    @CurrentUser('tenantId') tenantId: string
+  ) {
+    return this.usersService.transferToTenant(tenantId, ownerId, tenantUserId);
   }
 }
