@@ -48,7 +48,7 @@ export function ResidentLayout({ children }: ResidentLayoutProps) {
               >
                 <Building size={20} />
               </div>
-              <span className="font-medium text-lg hidden sm:block" style={{ color: 'var(--color-heading)' }}>
+              <span className="font-medium text-lg hidden sm:block whitespace-nowrap" style={{ color: 'var(--color-heading)' }}>
                 SmartSociety 360
               </span>
             </div>
@@ -99,8 +99,8 @@ export function ResidentLayout({ children }: ResidentLayoutProps) {
                   )}
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium leading-none" style={{ color: 'var(--color-heading)' }}>{user?.name}</span>
-                  <span className="text-[10px] mt-0.5" style={{ color: 'var(--color-placeholder)' }}>{user?.role.replace('_', ' ')}</span>
+                  <span className="text-sm font-medium leading-none whitespace-nowrap" style={{ color: 'var(--color-heading)' }}>{user?.name}</span>
+                  <span className="text-[10px] mt-0.5 whitespace-nowrap" style={{ color: 'var(--color-placeholder)' }}>{user?.role.replace('_', ' ')}</span>
                 </div>
               </div>
 
