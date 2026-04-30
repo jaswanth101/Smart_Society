@@ -3,9 +3,9 @@ import { useParams } from 'react-router-dom'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { CheckCircle, XCircle, Clock, User, Home, FileText, AlertTriangle } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, User, Home } from 'lucide-react'
 import { apiClient } from '@/lib/api'
-import { formatDistanceToNow } from 'date-fns'
+import { formatRelativeTime } from '@/lib/format'
 
 // ─────────────────────────────────────────────────────────
 // MembersApprovalsPage — Enterprise KYC / Move-in Approvals
@@ -111,7 +111,7 @@ export default function MembersApprovalsPage() {
                       </span>
                       <Badge variant="warning">Awaiting Original Docs</Badge>
                       <span className="flex items-center gap-1"><User size={12} />{user.role}</span>
-                      <span className="flex items-center gap-1"><Clock size={12} />{formatDistanceToNow(new Date(user.createdAt))} ago</span>
+                      <span className="flex items-center gap-1"><Clock size={12} />{formatRelativeTime(user.createdAt)}</span>
                     </div>
                   </div>
                 </div>

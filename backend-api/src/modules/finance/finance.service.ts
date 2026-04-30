@@ -331,6 +331,35 @@ export class FinanceService {
       _count: true
     });
 
+    // Monthly expense trend (approved expenses, grouped by month)
+    const allApprovedExpenses = await this.prisma.expense.findMany({
+      where: {
+        tenantId,
+        status: 'APPROVED',
+        createdAt: {
+          gte: new Date(`${targetYear}-01-01`),
+          lt: new Date(`${targetYear + 1}-01-01`),
+        },
+      },
+      select: { amount: true, createdAt: true },
+    });
+
+    // Group expenses by month name
+    const expenseByMonth = new Map<string, { spent: number; count: number }>();
+    for (const exp of allApprovedExpenses) {
+      const monthName = exp.createdAt.toLocaleString('default', { month: 'long' });
+      const entry = expenseByMonth.get(monthName) || { spent: 0, count: 0 };
+      entry.spent += exp.amount;
+      entry.count += 1;
+      expenseByMonth.set(monthName, entry);
+    }
+
+    const monthlyExpenseTrend = Array.from(expenseByMonth.entries()).map(([month, data]) => ({
+      month,
+      spent: data.spent,
+      count: data.count,
+    }));
+
     const totalIncome = paidInvoices._sum.amount || 0;
     const totalSpent = approvedExpenses._sum.amount || 0;
 
@@ -350,7 +379,8 @@ export class FinanceService {
       },
       profitLoss: totalIncome - totalSpent,
       collectionRate: paidInvoices._count > 0 ? Math.round((paidInvoices._count / (paidInvoices._count + pendingInvoices._count)) * 100) : 0,
-      monthlyTrend: monthlyCollections.map(m => ({ month: m.month, collected: m._sum.amount || 0, count: m._count }))
+      monthlyTrend: monthlyCollections.map(m => ({ month: m.month, collected: m._sum.amount || 0, count: m._count })),
+      monthlyExpenseTrend,
     };
   }
 }

@@ -2,6 +2,7 @@ import { type ReactNode, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Bell, User, Building, Home, CreditCard, MessageSquare, Menu, X, Users, Car, FileText, Dumbbell, QrCode } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { SOSButton } from '@/components/emergency/SOSButton'
 
 // ─────────────────────────────────────────────────────────
 // ResidentLayout — Tesla-inspired consumer-facing layout.
@@ -149,6 +150,9 @@ export function ResidentLayout({ children }: ResidentLayoutProps) {
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 animate-fade-in-up">
         {children}
       </main>
+
+      {/* SOS Floating Button — visible on every resident page */}
+      <SOSButton />
     </div>
   )
 }

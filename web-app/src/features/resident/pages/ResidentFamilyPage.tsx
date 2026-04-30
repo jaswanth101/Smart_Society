@@ -17,7 +17,7 @@ export default function ResidentFamilyPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    apiClient.get('/access/rfid')
+    apiClient.get('/access-control/rfid')
       .then(res => {
         // Filter to only show cards for the current user's flat
         setCards(res.data || [])

@@ -96,6 +96,18 @@ export class UsersService {
     });
   }
 
+  // ── LIGHTWEIGHT COUNTS (for Dashboard KPIs) ──────────────────
+
+  async getUserCounts(tenantId: string) {
+    const [total, active, pending] = await Promise.all([
+      this.prisma.user.count({ where: { tenantId } }),
+      this.prisma.user.count({ where: { tenantId, isActive: true } }),
+      this.prisma.user.count({ where: { tenantId, isActive: false } }),
+    ]);
+
+    return { total, active, pending };
+  }
+
   // ── ONBOARDING & KYC PIPELINE ────────────────────────────────
 
   async getPendingUsers(tenantId: string) {

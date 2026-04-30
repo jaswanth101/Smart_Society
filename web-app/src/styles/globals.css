@@ -103,6 +103,22 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--color-electric-blue);
 }
 
+/* Sub-menu child items — indented, smaller */
+.nav-child {
+  padding-left: 2.75rem;
+  font-size: 13px;
+  font-weight: 400;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-left: 2px solid transparent;
+  margin-left: 1rem;
+}
+.nav-child.active {
+  border-left-color: var(--color-electric-blue);
+  background: rgba(62,106,225,0.08);
+  font-weight: 500;
+}
+
 /* ── Card — no shadow, no border ─────────────────────────── */
 .card {
   background: var(--color-white);

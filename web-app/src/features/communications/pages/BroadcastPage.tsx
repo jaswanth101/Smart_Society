@@ -1,23 +1,61 @@
 import { useState } from 'react'
 import { DashboardLayout } from '@/layouts/DashboardLayout'
 import { Card } from '@/components/ui/Card'
-import { BellRing, Send, CheckCircle2, MessageSquare, Smartphone } from 'lucide-react'
+import { Badge } from '@/components/ui/Badge'
+import { BellRing, Send, CheckCircle2, MessageSquare, Smartphone, Loader2 } from 'lucide-react'
+import { useApiQuery } from '@/hooks/useApiQuery'
+import { useApiMutation } from '@/hooks/useApiMutation'
+import { formatRelativeTime } from '@/lib/format'
+import type { CreateBroadcastPayload, BroadcastRecord } from '@/types/api-contracts'
 
 // ─────────────────────────────────────────────────────────
 // BroadcastPage — Tesla-inspired Emergency Broadcast Console
+// POST /communications/broadcasts + GET /communications/broadcasts
 // ─────────────────────────────────────────────────────────
 
 export default function BroadcastPage() {
+  const [title, setTitle] = useState('')
   const [message, setMessage] = useState('')
   const [priority, setPriority] = useState<'CRITICAL' | 'INFO'>('INFO')
   const [channels, setChannels] = useState({ push: true, whatsapp: true, sms: false })
-  const [sent, setSent] = useState(false)
+  const [successId, setSuccessId] = useState<string | null>(null)
 
-  const handleSend = (e: React.FormEvent) => {
+  // ── Live broadcast history ───────────────────────────────
+  const history = useApiQuery<BroadcastRecord[]>('/communications/broadcasts')
+
+  // ── Mutation for sending broadcasts ──────────────────────
+  const sendBroadcast = useApiMutation<CreateBroadcastPayload, BroadcastRecord>(
+    '/communications/broadcasts',
+    {
+      onSuccess: (data) => {
+        setSuccessId(data.id)
+        setTitle('')
+        setMessage('')
+        // Refresh the history list
+        history.refetch()
+        // Clear success state after 4 seconds
+        setTimeout(() => setSuccessId(null), 4000)
+      },
+    }
+  )
+
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!message.trim()) return
-    setSent(true)
-    setTimeout(() => { setSent(false); setMessage('') }, 3000)
+    if (!title.trim() || !message.trim()) return
+
+    // Build the channel string from selections
+    const selectedChannels = Object.entries(channels)
+      .filter(([, v]) => v)
+      .map(([k]) => k.toUpperCase())
+      .join(',') || 'ALL'
+
+    await sendBroadcast.execute({
+      title: priority === 'CRITICAL' ? `⚠️ EMERGENCY: ${title}` : title,
+      body: message,
+      channel: selectedChannels,
+    }).catch(() => {
+      // Error is already captured in sendBroadcast.error
+    })
   }
 
   return (
@@ -58,6 +96,23 @@ export default function BroadcastPage() {
                 </div>
               </div>
 
+              {/* Title */}
+              <div className="mb-4">
+                <label className="block text-[17px] font-medium mb-3" style={{ color: 'var(--color-heading)' }}>Alert title</label>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Water Supply Disruption"
+                  className="w-full h-11 px-4 rounded-[4px] text-sm transition-all duration-[330ms]"
+                  style={{
+                    border: '1px solid var(--color-cloud)',
+                    color: 'var(--color-heading)',
+                    background: 'var(--color-white)',
+                  }}
+                  required
+                />
+              </div>
+
               {/* Message */}
               <div className="mb-8 flex-1">
                 <label className="block text-[17px] font-medium mb-3" style={{ color: 'var(--color-heading)' }}>Message payload</label>
@@ -76,16 +131,29 @@ export default function BroadcastPage() {
                 />
               </div>
 
+              {/* Error */}
+              {sendBroadcast.error && (
+                <div className="mb-4 px-4 py-3 rounded-[4px] text-sm" style={{ background: '#fee2e2', color: '#991b1b' }} role="alert">
+                  {sendBroadcast.error.message}
+                </div>
+              )}
+
               {/* Action */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-6 mt-auto gap-4" style={{ borderTop: '1px solid var(--color-cloud)' }}>
                 <span className="text-xs" style={{ color: 'var(--color-placeholder)' }}>Characters: {message.length}</span>
                 <button
                   type="submit"
-                  disabled={!message.trim() || sent}
+                  disabled={!title.trim() || !message.trim() || sendBroadcast.isLoading}
                   className="px-8 py-3 rounded-[4px] font-medium text-sm text-white flex items-center gap-2 transition-colors duration-[330ms] disabled:opacity-40 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
-                  style={{ background: 'var(--color-electric-blue)' }}
+                  style={{ background: successId ? '#10b981' : 'var(--color-electric-blue)' }}
                 >
-                  {sent ? <><CheckCircle2 size={18} /> Broadcast sent</> : <><Send size={18} /> Send alert</>}
+                  {sendBroadcast.isLoading ? (
+                    <><Loader2 size={18} className="animate-spin" /> Sending…</>
+                  ) : successId ? (
+                    <><CheckCircle2 size={18} /> Broadcast sent</>
+                  ) : (
+                    <><Send size={18} /> Send alert</>
+                  )}
                 </button>
               </div>
             </form>
@@ -115,6 +183,32 @@ export default function BroadcastPage() {
                   </div>
                 </label>
               ))}
+            </div>
+          </Card>
+
+          {/* Broadcast History */}
+          <Card title="Recent broadcasts" subtitle={history.data ? `${history.data.length} total` : 'Loading…'}>
+            <div className="space-y-2 mt-2">
+              {history.isLoading ? (
+                Array.from({ length: 3 }).map((_, idx) => (
+                  <div key={idx} className="py-3 animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded-[4px] w-2/3 mb-1" />
+                    <div className="h-3 bg-gray-200 rounded-[4px] w-1/3" />
+                  </div>
+                ))
+              ) : !history.data || history.data.length === 0 ? (
+                <p className="text-xs py-2" style={{ color: 'var(--color-placeholder)' }}>No broadcasts sent yet.</p>
+              ) : (
+                history.data.slice(0, 5).map((b) => (
+                  <div key={b.id} className="py-3" style={{ borderBottom: '1px solid var(--color-cloud)' }}>
+                    <p className="text-sm font-medium truncate" style={{ color: 'var(--color-heading)' }}>{b.title}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="neutral">{b.channel}</Badge>
+                      <span className="text-[10px]" style={{ color: 'var(--color-placeholder)' }}>{formatRelativeTime(b.sentAt)}</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </Card>
 

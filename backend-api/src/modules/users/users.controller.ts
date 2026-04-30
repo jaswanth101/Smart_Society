@@ -33,6 +33,15 @@ export class UsersController {
     return this.usersService.findAllByTenant(tenantId);
   }
 
+  // ── LIGHTWEIGHT COUNTS (for Dashboard KPIs) ──────────────────
+
+  @Get('count')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.PRESIDENT, UserRole.SECRETARY, UserRole.TREASURER)
+  @ApiOperation({ summary: 'Get user counts without fetching all records — optimized for dashboard KPIs' })
+  getUserCounts(@CurrentUser('tenantId') tenantId: string) {
+    return this.usersService.getUserCounts(tenantId);
+  }
+
   // ── ONBOARDING & KYC PIPELINE ────────────────────────────────
 
   @Get('pending')

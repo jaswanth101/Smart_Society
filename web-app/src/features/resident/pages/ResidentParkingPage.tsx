@@ -15,8 +15,11 @@ export default function ResidentParkingPage() {
 
   useEffect(() => {
     apiClient.get('/property/parking')
-      .then(res => setSlots(res.data))
-      .catch(err => console.error('Failed to load parking data', err))
+      .then(res => setSlots(Array.isArray(res.data) ? res.data : []))
+      .catch(() => {
+        // Endpoint not built yet (Sprint 2) — degrade gracefully to empty state
+        setSlots([])
+      })
       .finally(() => setLoading(false))
   }, [])
 
